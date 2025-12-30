@@ -1,23 +1,26 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import BaseUserManager
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, name, password=None):
+    def create_user(self, email, name, password=None, verified=False):
         if not email:
             raise ValueError('Users must have an email address')
 
+        email = self.normalize_email(email)
         user = self.model(
-            email=self.normalize_email(email),
+            email=email,
             name=name,
+            verified=verified,
         )
         user.set_password(password)
         user.save(using=self._db)
         return user
 
     def create_superuser(self, email, name, password=None):
-        user = self.create_user(email, name, password)
-        user.is_admin = True
+        user = self.create_user(email, name, password, verified=True)
         user.is_superuser = True
         user.save(using=self._db)
         return user
@@ -26,10 +29,9 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, max_length=255)
     name = models.CharField(max_length=255)
-    is_active = models.BooleanField(default=True)
-    is_admin = models.BooleanField(default=False)
+    verified = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    last_login = models.DateTimeField(auto_now=True)
 
     objects = UserManager()
 
@@ -39,6 +41,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+    def save(self, *args, **kwargs):
+        if not self.last_seen:
+            self.last_seen = timezone.now()
+        super().save(*args, **kwargs)
+
     @property
     def is_staff(self):
-        return self.is_admin
+        return self.verified
