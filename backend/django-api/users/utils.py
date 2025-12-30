@@ -15,6 +15,7 @@ def send_otp(email, otp, name='User'):
 
     {otp}
 
+    This code is valid for 2 minutes.
     Please do not share this code with anyone.
 
     If you did not request this verification, you can safely ignore this email.
