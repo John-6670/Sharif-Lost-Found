@@ -133,9 +133,9 @@ AUTH_USER_MODEL = 'users.User'
 # DRF Settings
 REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
-        'otp_ip': '10/5min',
-        'otp_email': '4/10min',
-        'otp_verify': '5/10min',
+        'otp_ip': '2/m',
+        'otp_email': '24/h',
+        'otp_verify': '30/h',
     }
 }
 

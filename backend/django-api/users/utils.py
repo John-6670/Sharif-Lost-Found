@@ -1,9 +1,13 @@
 import random
+import hashlib
 from django.core.mail import send_mail
 from django.conf import settings
 
 def generate_otp():
     return str(random.randint(100000, 999999))
+
+def hash_otp(otp: str):
+    return hashlib.sha256(otp.encode()).hexdigest()
 
 def send_otp(email, otp, name='User'):
     subject = "Lost & Found System – One-Time Verification Code"
