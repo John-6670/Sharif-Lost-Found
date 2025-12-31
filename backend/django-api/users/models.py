@@ -1,6 +1,9 @@
+import hashlib
+
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.hashers import make_password, check_password
 
 
 class UserManager(BaseUserManager):
@@ -52,6 +55,17 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class RegistrationOTP(models.Model):
     email = models.EmailField()
-    otp = models.CharField(max_length=6)
+    otp_hash = models.CharField(max_length=128)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def set_otp(self, otp_plaintext):
+        """Hash OTP before saving"""
+        self.otp_hash = make_password(otp_plaintext)
+
+    def verify_otp(self, otp_plaintext):
+        """Compare provided OTP with stored hash"""
+        return check_password(otp_plaintext, self.otp_hash)
+
+    def is_expired(self):
+        """Check if OTP is older than 2 minutes"""
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=2)
