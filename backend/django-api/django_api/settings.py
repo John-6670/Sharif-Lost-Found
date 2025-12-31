@@ -124,6 +124,15 @@ STATIC_URL = 'static/'
 
 AUTH_USER_MODEL = 'users.User'
 
+# DRF Settings
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_RATES': {
+        'otp_ip': '10/5min',
+        'otp_email': '4/10min',
+        'otp_verify': '5/10min',
+    }
+}
+
 # OTP Settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.example.com')
@@ -132,4 +141,3 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-

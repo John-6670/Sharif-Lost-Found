@@ -9,10 +9,15 @@ from datetime import timedelta
 from .models import RegistrationOTP, User
 from .serializers import OTPRequestSerializer, OTPVerifySerializer
 from .utils import generate_otp, send_otp
+from .throttles import OTPIPRateThrottle, OTPEmailRateThrottle, OTPVerifyRateThrottle
 
 
 class RegisterRequestView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [
+        OTPIPRateThrottle,
+        OTPEmailRateThrottle,
+    ]
 
     def post(self, request):
         serializer = OTPRequestSerializer(data=request.data)
@@ -35,6 +40,9 @@ class RegisterRequestView(APIView):
 
 
 class RegisterVerifyView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [OTPVerifyRateThrottle]
+
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
         if serializer.is_valid():
@@ -64,6 +72,10 @@ class RegisterVerifyView(APIView):
 
 class ResendOTPView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [
+        OTPIPRateThrottle,
+        OTPEmailRateThrottle,
+    ]
 
     def post(self, request):
         email = request.data.get('email')
@@ -76,4 +88,3 @@ class ResendOTPView(APIView):
         RegistrationOTP.objects.update_or_create(email=email, defaults={'otp': otp})
         send_otp(email, otp, user.name)
         return Response({'message': 'OTP resent to email'}, status=status.HTTP_200_OK)
-
