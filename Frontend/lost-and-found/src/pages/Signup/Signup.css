@@ -437,6 +437,117 @@
   text-decoration: underline;
 }
 
+/* Back Link Button */
+.back-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* ========== OTP Verification Step Styles ========== */
+
+/* Email Display */
+.email-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #f3f4f6;
+  padding: 14px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.email-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.edit-email-btn {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.edit-email-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.edit-email-btn:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* OTP Group */
+.otp-group {
+  text-align: center;
+}
+
+.otp-group label {
+  display: block;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Resend Section */
+.signup-container .resend-section {
+  text-align: center;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.signup-container .resend-cooldown {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.signup-container .resend-btn {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s ease;
+}
+
+.signup-container .resend-btn:hover:not(:disabled) {
+  color: #5a67d8;
+  text-decoration: underline;
+}
+
+.signup-container .resend-btn:disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.signup-container .resend-btn:focus {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* ========== Responsive Design ========== */
 
 @media (max-width: 540px) {
@@ -578,6 +689,43 @@
 
   .success-card p {
     color: #9ca3af;
+  }
+
+  /* OTP Verification Dark Mode */
+  .email-display {
+    background: #374151;
+  }
+
+  .email-text {
+    color: #e5e7eb;
+  }
+
+  .edit-email-btn {
+    color: #818cf8;
+  }
+
+  .edit-email-btn:hover {
+    background: rgba(129, 140, 248, 0.1);
+  }
+
+  .otp-group label {
+    color: #e5e7eb;
+  }
+
+  .signup-container .resend-cooldown {
+    color: #6b7280;
+  }
+
+  .signup-container .resend-btn {
+    color: #818cf8;
+  }
+
+  .signup-container .resend-btn:hover:not(:disabled) {
+    color: #a5b4fc;
+  }
+
+  .back-link {
+    color: #818cf8;
   }
 }
 

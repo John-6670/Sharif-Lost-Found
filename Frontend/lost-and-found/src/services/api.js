@@ -56,7 +56,7 @@ function getErrorMessage(status) {
 }
 
 /**
- * Sign up a new student
+ * Sign up a new student (legacy - without OTP)
  * @param {Object} userData - User registration data
  * @param {string} userData.fullName - Student's full name
  * @param {string} userData.email - User email
@@ -67,6 +67,37 @@ export async function signup(userData) {
   return fetchAPI("/auth/signup", {
     method: "POST",
     body: JSON.stringify(userData),
+  });
+}
+
+/**
+ * Request OTP for signup (Step 1)
+ * Sends OTP code to user's email for verification
+ * @param {Object} data - Request data
+ * @param {string} data.email - User email to verify
+ * @returns {Promise<Object>} - Response from server
+ */
+export async function signupRequestOtp(data) {
+  return fetchAPI("/auth/signup/request-otp", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Verify OTP and complete signup (Step 2)
+ * Verifies OTP code and creates user account
+ * @param {Object} data - Signup data with OTP
+ * @param {string} data.email - User email
+ * @param {string} data.otp - OTP code received via email
+ * @param {string} data.fullName - User's full name
+ * @param {string} data.password - User password
+ * @returns {Promise<Object>} - Response from server
+ */
+export async function signupVerifyOtp(data) {
+  return fetchAPI("/auth/signup/verify-otp", {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 

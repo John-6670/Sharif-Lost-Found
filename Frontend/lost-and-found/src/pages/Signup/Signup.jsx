@@ -1,7 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { signup } from "../../services/api";
+import { signupRequestOtp, signupVerifyOtp } from "../../services/api";
+import OtpInput from "../../components/OtpInput/OtpInput";
 import "./Signup.css";
+
+const OTP_LENGTH = 6;
+const RESEND_COOLDOWN = 60; // seconds
 
 // Password strength calculator
 function getPasswordStrength(password) {
@@ -29,6 +33,9 @@ function isValidEmail(email) {
 export default function Signup() {
   const navigate = useNavigate();
   
+  // Step state: 'form' or 'verify'
+  const [step, setStep] = useState("form");
+  
   // Form state
   const [formData, setFormData] = useState({
     fullName: "",
@@ -38,6 +45,11 @@ export default function Signup() {
     acceptTerms: false,
   });
 
+  // OTP state
+  const [otp, setOtp] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
   // UI state
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -46,6 +58,16 @@ export default function Signup() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // Validation
   const validateField = useCallback((name, value, allData = formData) => {
@@ -112,7 +134,8 @@ export default function Signup() {
     setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
-  const handleSubmit = async (e) => {
+  // Step 1: Submit form and request OTP
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     
     // Mark all fields as touched
@@ -130,9 +153,63 @@ export default function Signup() {
     setSubmitError("");
     
     try {
-      await signup({
-        fullName: formData.fullName,
+      await signupRequestOtp({ email: formData.email });
+      setStep("verify");
+      setResendCooldown(RESEND_COOLDOWN);
+    } catch (error) {
+      setSubmitError(error.message || "خطا در ارسال کد تأیید. لطفاً دوباره تلاش کنید.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle OTP change
+  const handleOtpChange = (value) => {
+    setOtp(value);
+    setSubmitError("");
+  };
+
+  // Resend OTP
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || isResending) return;
+    
+    setIsResending(true);
+    
+    try {
+      await signupRequestOtp({ email: formData.email });
+      setResendCooldown(RESEND_COOLDOWN);
+    } catch {
+      // Silently fail or show brief message
+      setResendCooldown(RESEND_COOLDOWN);
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  // Go back to form step
+  const handleEditEmail = () => {
+    setStep("form");
+    setOtp("");
+    setSubmitError("");
+  };
+
+  // Step 2: Verify OTP and complete signup
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    
+    if (otp.length !== OTP_LENGTH) {
+      setSubmitError("لطفاً کد تأیید ۶ رقمی را وارد کنید");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmitError("");
+    
+    try {
+      await signupVerifyOtp({
         email: formData.email,
+        otp: otp,
+        fullName: formData.fullName,
         password: formData.password,
       });
       
@@ -141,7 +218,7 @@ export default function Signup() {
         navigate("/login");
       }, 2000);
     } catch (error) {
-      setSubmitError(error.message || "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.");
+      setSubmitError(error.message || "کد تأیید نامعتبر یا منقضی شده است.");
     } finally {
       setIsSubmitting(false);
     }
@@ -157,6 +234,9 @@ export default function Signup() {
     formData.confirmPassword === formData.password &&
     formData.acceptTerms;
 
+  const isOtpValid = otp.length === OTP_LENGTH && /^\d+$/.test(otp);
+
+  // Success state
   if (submitSuccess) {
     return (
       <div className="signup-container">
@@ -169,6 +249,100 @@ export default function Signup() {
     );
   }
 
+  // Step 2: OTP Verification
+  if (step === "verify") {
+    return (
+      <div className="signup-container">
+        <div className="signup-card">
+          <div className="signup-header">
+            <div className="logo-icon">📧</div>
+            <h1>تأیید ایمیل</h1>
+            <p>کد تأیید ۶ رقمی به ایمیل زیر ارسال شد</p>
+          </div>
+
+          {/* Email display */}
+          <div className="email-display">
+            <span className="email-text" dir="ltr">{formData.email}</span>
+            <button 
+              type="button" 
+              className="edit-email-btn"
+              onClick={handleEditEmail}
+            >
+              ویرایش
+            </button>
+          </div>
+
+          {submitError && (
+            <div className="alert alert-error" role="alert">
+              <span className="alert-icon">⚠</span>
+              {submitError}
+            </div>
+          )}
+
+          <form onSubmit={handleVerifySubmit} noValidate>
+            {/* OTP Input */}
+            <div className="form-group otp-group">
+              <label>کد تأیید</label>
+              <OtpInput
+                value={otp}
+                onChange={handleOtpChange}
+                hasError={!!submitError}
+                length={OTP_LENGTH}
+              />
+            </div>
+
+            {/* Resend Code */}
+            <div className="resend-section">
+              {resendCooldown > 0 ? (
+                <span className="resend-cooldown">
+                  ارسال مجدد کد ({resendCooldown} ثانیه)
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="resend-btn"
+                  onClick={handleResendOtp}
+                  disabled={isResending}
+                >
+                  {isResending ? "در حال ارسال..." : "ارسال مجدد کد"}
+                </button>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="submit-btn"
+              disabled={!isOtpValid || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="spinner" />
+                  در حال تأیید...
+                </>
+              ) : (
+                "تأیید و تکمیل ثبت‌نام"
+              )}
+            </button>
+          </form>
+
+          <div className="signup-footer">
+            <p>
+              <button 
+                type="button" 
+                className="back-link"
+                onClick={handleEditEmail}
+              >
+                بازگشت به فرم ثبت‌نام
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 1: Registration Form
   return (
     <div className="signup-container">
       <div className="signup-card">
@@ -185,7 +359,7 @@ export default function Signup() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleFormSubmit} noValidate>
           {/* Full Name */}
           <div className="form-group">
             <label htmlFor="fullName">
@@ -372,10 +546,10 @@ export default function Signup() {
             {isSubmitting ? (
               <>
                 <span className="spinner" />
-                در حال ثبت‌نام...
+                در حال ارسال کد تأیید...
               </>
             ) : (
-              "ثبت‌نام"
+              "ادامه و دریافت کد تأیید"
             )}
           </button>
         </form>
@@ -390,4 +564,3 @@ export default function Signup() {
     </div>
   );
 }
-
