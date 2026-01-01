@@ -1,3 +1,5 @@
+from asyncio import AbstractEventLoop
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +12,7 @@ from .serializers import (
     OTPVerifySerializer,
     ResendOTPSerializer,
     UserPublicSerializer,
+    LoginSerializer
 )
 from .utils import generate_otp, send_otp
 from .throttles import OTPIPRateThrottle, OTPEmailRateThrottle, OTPVerifyRateThrottle
@@ -17,7 +20,6 @@ from .throttles import OTPIPRateThrottle, OTPEmailRateThrottle, OTPVerifyRateThr
 
 
 class RegisterRequestView(APIView):
-    permission_classes = [AllowAny]
     throttle_classes = [OTPIPRateThrottle, OTPEmailRateThrottle]
 
     @swagger_auto_schema(
@@ -48,7 +50,6 @@ class RegisterRequestView(APIView):
 
 
 class RegisterVerifyView(APIView):
-    permission_classes = [AllowAny]
     throttle_classes = [OTPVerifyRateThrottle]
 
     @swagger_auto_schema(
@@ -86,7 +87,6 @@ class RegisterVerifyView(APIView):
 
 
 class ResendOTPView(APIView):
-    permission_classes = [AllowAny]
     throttle_classes = [OTPIPRateThrottle, OTPEmailRateThrottle]
 
     @swagger_auto_schema(
@@ -110,3 +110,18 @@ class ResendOTPView(APIView):
 
         send_otp(email, otp, user.name)
         return Response({'message': 'OTP resent to email'}, status=status.HTTP_200_OK)
+
+
+class LoginView(APIView):
+    @swagger_auto_schema(
+        request_body=LoginSerializer,
+        responses={200: UserPublicSerializer, 400: 'Invalid credentials'}
+    )
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.validated_data['user']
+        return Response(UserPublicSerializer(user).data, status=status.HTTP_200_OK)
+
