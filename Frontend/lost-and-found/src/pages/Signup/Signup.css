@@ -99,6 +99,13 @@
   margin: 0;
 }
 
+.otp-expiry-note {
+  color: #f59e0b;
+  font-size: 13px;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
 /* Alert */
 .alert {
   display: flex;
@@ -819,6 +826,10 @@
 
   .back-link {
     color: #818cf8;
+  }
+
+  .otp-expiry-note {
+    color: #fbbf24;
   }
 }
 
