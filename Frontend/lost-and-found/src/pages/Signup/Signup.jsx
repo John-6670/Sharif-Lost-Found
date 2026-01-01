@@ -2,33 +2,19 @@ import { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signupRequestOtp, signupVerifyOtp } from "../../services/api";
 import OtpInput from "../../components/OtpInput/OtpInput";
+import {
+  validateUniversityEmail,
+  validatePassword,
+  validateConfirmPassword,
+  validateFullName,
+  checkPasswordRequirements,
+  getPasswordStrength,
+  normalizeEmail,
+} from "../../utils/validation";
 import "./Signup.css";
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60; // seconds
-
-// Password strength calculator
-function getPasswordStrength(password) {
-  if (!password) return { level: 0, label: "", color: "" };
-  
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (password.length >= 12) score++;
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-  if (/\d/.test(password)) score++;
-  if (/[^a-zA-Z0-9]/.test(password)) score++;
-
-  if (score <= 1) return { level: 1, label: "ضعیف", color: "#ef4444" };
-  if (score <= 2) return { level: 2, label: "متوسط", color: "#f59e0b" };
-  if (score <= 3) return { level: 3, label: "خوب", color: "#3b82f6" };
-  return { level: 4, label: "قوی", color: "#16a34a" };
-}
-
-// Email validation
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -59,6 +45,18 @@ export default function Signup() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  // Password requirements state (live update)
+  const [passwordRequirements, setPasswordRequirements] = useState(
+    checkPasswordRequirements("", { email: "" })
+  );
+
+  // Update password requirements on password/email change
+  useEffect(() => {
+    setPasswordRequirements(
+      checkPasswordRequirements(formData.password, { email: formData.email })
+    );
+  }, [formData.password, formData.email]);
+
   // Cooldown timer
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -72,25 +70,25 @@ export default function Signup() {
   // Validation
   const validateField = useCallback((name, value, allData = formData) => {
     switch (name) {
-      case "fullName":
-        if (!value.trim()) return "نام و نام خانوادگی الزامی است";
-        if (value.trim().length < 3) return "نام باید حداقل ۳ کاراکتر باشد";
-        return "";
+      case "fullName": {
+        const result = validateFullName(value);
+        return result.error;
+      }
       
-      case "email":
-        if (!value.trim()) return "ایمیل الزامی است";
-        if (!isValidEmail(value)) return "فرمت ایمیل نامعتبر است";
-        return "";
+      case "email": {
+        const result = validateUniversityEmail(value);
+        return result.error;
+      }
       
-      case "password":
-        if (!value) return "رمز عبور الزامی است";
-        if (value.length < 8) return "رمز عبور باید حداقل ۸ کاراکتر باشد";
-        return "";
+      case "password": {
+        const result = validatePassword(value, { email: allData.email });
+        return result.error;
+      }
       
-      case "confirmPassword":
-        if (!value) return "تکرار رمز عبور الزامی است";
-        if (value !== allData.password) return "رمز عبور و تکرار آن مطابقت ندارند";
-        return "";
+      case "confirmPassword": {
+        const result = validateConfirmPassword(allData.password, value);
+        return result.error;
+      }
       
       case "acceptTerms":
         if (!value) return "پذیرش قوانین الزامی است";
@@ -123,6 +121,15 @@ export default function Signup() {
       const error = validateField(name, newValue, { ...formData, [name]: newValue });
       setErrors((prev) => ({ ...prev, [name]: error }));
     }
+    
+    // Also revalidate confirm password when password changes
+    if (name === "password" && touched.confirmPassword) {
+      const confirmError = validateField("confirmPassword", formData.confirmPassword, { 
+        ...formData, 
+        password: newValue 
+      });
+      setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
+    }
   };
 
   const handleBlur = (e) => {
@@ -153,7 +160,8 @@ export default function Signup() {
     setSubmitError("");
     
     try {
-      await signupRequestOtp({ email: formData.email });
+      const normalizedEmail = normalizeEmail(formData.email);
+      await signupRequestOtp({ email: normalizedEmail });
       setStep("verify");
       setResendCooldown(RESEND_COOLDOWN);
     } catch (error) {
@@ -176,7 +184,8 @@ export default function Signup() {
     setIsResending(true);
     
     try {
-      await signupRequestOtp({ email: formData.email });
+      const normalizedEmail = normalizeEmail(formData.email);
+      await signupRequestOtp({ email: normalizedEmail });
       setResendCooldown(RESEND_COOLDOWN);
     } catch {
       // Silently fail or show brief message
@@ -206,10 +215,11 @@ export default function Signup() {
     setSubmitError("");
     
     try {
+      const normalizedEmail = normalizeEmail(formData.email);
       await signupVerifyOtp({
-        email: formData.email,
+        email: normalizedEmail,
         otp: otp,
-        fullName: formData.fullName,
+        fullName: formData.fullName.trim(),
         password: formData.password,
       });
       
@@ -226,12 +236,12 @@ export default function Signup() {
 
   const passwordStrength = getPasswordStrength(formData.password);
   
-  // Check if form is valid - simplified check
+  // Check if form is valid
   const isFormValid = 
-    formData.fullName.trim().length >= 3 &&
-    isValidEmail(formData.email) &&
-    formData.password.length >= 8 &&
-    formData.confirmPassword === formData.password &&
+    validateFullName(formData.fullName).valid &&
+    validateUniversityEmail(formData.email).valid &&
+    validatePassword(formData.password, { email: formData.email }).valid &&
+    validateConfirmPassword(formData.password, formData.confirmPassword).valid &&
     formData.acceptTerms;
 
   const isOtpValid = otp.length === OTP_LENGTH && /^\d+$/.test(otp);
@@ -262,7 +272,7 @@ export default function Signup() {
 
           {/* Email display */}
           <div className="email-display">
-            <span className="email-text" dir="ltr">{formData.email}</span>
+            <span className="email-text" dir="ltr">{normalizeEmail(formData.email)}</span>
             <button 
               type="button" 
               className="edit-email-btn"
@@ -428,9 +438,9 @@ export default function Signup() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 className={errors.password && touched.password ? "input-error" : ""}
-                placeholder="حداقل ۸ کاراکتر"
+                placeholder="حداقل ۱۰ کاراکتر"
                 dir="ltr"
-                aria-describedby={errors.password ? "password-error" : "password-hint"}
+                aria-describedby="password-requirements"
                 aria-invalid={errors.password && touched.password ? "true" : "false"}
                 autoComplete="new-password"
               />
@@ -444,6 +454,7 @@ export default function Signup() {
               </button>
             </div>
             
+            {/* Password Strength Indicator */}
             {formData.password && (
               <div className="password-strength">
                 <div className="strength-bar">
@@ -460,16 +471,53 @@ export default function Signup() {
                 </span>
               </div>
             )}
+
+            {/* Password Requirements Checklist */}
+            {(formData.password || touched.password) && (
+              <div className="password-requirements" id="password-requirements">
+                <p className="requirements-title">الزامات رمز عبور:</p>
+                <ul className="requirements-list">
+                  <li className={passwordRequirements.minLength.met ? "met" : ""}>
+                    <span className="check-icon">{passwordRequirements.minLength.met ? "✓" : "○"}</span>
+                    {passwordRequirements.minLength.label}
+                  </li>
+                  <li className={passwordRequirements.categoriesCount.met ? "met" : ""}>
+                    <span className="check-icon">{passwordRequirements.categoriesCount.met ? "✓" : "○"}</span>
+                    {passwordRequirements.categoriesCount.label}
+                    <ul className="sub-requirements">
+                      <li className={passwordRequirements.hasLowercase.met ? "met" : ""}>
+                        <span className="check-icon">{passwordRequirements.hasLowercase.met ? "✓" : "○"}</span>
+                        {passwordRequirements.hasLowercase.label}
+                      </li>
+                      <li className={passwordRequirements.hasUppercase.met ? "met" : ""}>
+                        <span className="check-icon">{passwordRequirements.hasUppercase.met ? "✓" : "○"}</span>
+                        {passwordRequirements.hasUppercase.label}
+                      </li>
+                      <li className={passwordRequirements.hasDigit.met ? "met" : ""}>
+                        <span className="check-icon">{passwordRequirements.hasDigit.met ? "✓" : "○"}</span>
+                        {passwordRequirements.hasDigit.label}
+                      </li>
+                      <li className={passwordRequirements.hasSymbol.met ? "met" : ""}>
+                        <span className="check-icon">{passwordRequirements.hasSymbol.met ? "✓" : "○"}</span>
+                        {passwordRequirements.hasSymbol.label}
+                      </li>
+                    </ul>
+                  </li>
+                  <li className={passwordRequirements.noLeadingTrailingSpaces.met ? "met" : ""}>
+                    <span className="check-icon">{passwordRequirements.noLeadingTrailingSpaces.met ? "✓" : "○"}</span>
+                    {passwordRequirements.noLeadingTrailingSpaces.label}
+                  </li>
+                  <li className={passwordRequirements.noPersonalInfo.met ? "met" : ""}>
+                    <span className="check-icon">{passwordRequirements.noPersonalInfo.met ? "✓" : "○"}</span>
+                    {passwordRequirements.noPersonalInfo.label}
+                  </li>
+                </ul>
+              </div>
+            )}
             
             {errors.password && touched.password && (
               <span className="error-message" id="password-error" role="alert">
                 {errors.password}
-              </span>
-            )}
-            
-            {!errors.password && (
-              <span className="hint" id="password-hint">
-                ترکیب حروف بزرگ، کوچک، اعداد و نمادها امنیت بیشتری دارد
               </span>
             )}
           </div>

@@ -254,6 +254,73 @@
   text-align: left;
 }
 
+/* Password Requirements Checklist */
+.password-requirements {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+
+.requirements-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin: 0 0 10px 0;
+}
+
+.requirements-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.requirements-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 3px 0;
+  transition: color 0.2s ease;
+}
+
+.requirements-list li.met {
+  color: #16a34a;
+}
+
+.requirements-list .check-icon {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+
+.requirements-list li.met .check-icon {
+  color: #16a34a;
+  transform: scale(1.1);
+}
+
+/* Sub-requirements (nested categories) */
+.sub-requirements {
+  list-style: none;
+  padding: 4px 0 4px 20px;
+  margin: 4px 0 0 0;
+  border-right: 2px solid #e2e8f0;
+}
+
+.sub-requirements li {
+  font-size: 11px;
+  padding: 2px 0;
+}
+
+.sub-requirements .check-icon {
+  width: 12px;
+  font-size: 10px;
+}
+
 /* Error Message */
 .error-message {
   display: block;
@@ -675,6 +742,32 @@
 
   .strength-bar {
     background: #374151;
+  }
+
+  /* Password Requirements Dark Mode */
+  .password-requirements {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .requirements-title {
+    color: #94a3b8;
+  }
+
+  .requirements-list {
+    color: #94a3b8;
+  }
+
+  .requirements-list li.met {
+    color: #4ade80;
+  }
+
+  .requirements-list li.met .check-icon {
+    color: #4ade80;
+  }
+
+  .sub-requirements {
+    border-color: #334155;
   }
 
   .alert-error {

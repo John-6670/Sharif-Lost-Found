@@ -2,33 +2,19 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resetPassword, forgotPassword } from "../../services/api";
 import OtpInput from "../../components/OtpInput/OtpInput";
+import {
+  validateUniversityEmail,
+  validatePassword,
+  validateConfirmPassword,
+  validateOtp,
+  checkPasswordRequirements,
+  getPasswordStrength,
+  normalizeEmail,
+} from "../../utils/validation";
 import "./ResetPassword.css";
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60; // seconds
-
-// Email validation
-function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-// Password strength calculator
-function getPasswordStrength(password) {
-  if (!password) return { level: 0, label: "", color: "" };
-  
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (password.length >= 12) score++;
-  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-  if (/\d/.test(password)) score++;
-  if (/[^a-zA-Z0-9]/.test(password)) score++;
-
-  if (score <= 1) return { level: 1, label: "ضعیف", color: "#ef4444" };
-  if (score <= 2) return { level: 2, label: "متوسط", color: "#f59e0b" };
-  if (score <= 3) return { level: 3, label: "خوب", color: "#3b82f6" };
-  return { level: 4, label: "قوی", color: "#16a34a" };
-}
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -55,6 +41,18 @@ export default function ResetPassword() {
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
   const [isResending, setIsResending] = useState(false);
 
+  // Password requirements state (live update)
+  const [passwordRequirements, setPasswordRequirements] = useState(
+    checkPasswordRequirements("", { email: "" })
+  );
+
+  // Update password requirements on password/email change
+  useEffect(() => {
+    setPasswordRequirements(
+      checkPasswordRequirements(formData.password, { email: formData.email })
+    );
+  }, [formData.password, formData.email]);
+
   // Cooldown timer
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -68,28 +66,25 @@ export default function ResetPassword() {
   // Validation
   const validateField = useCallback((name, value, allData = formData) => {
     switch (name) {
-      case "email":
-        if (!value.trim()) return "ایمیل الزامی است";
-        if (!isValidEmail(value.trim())) {
-          return "فرمت ایمیل نامعتبر است";
-        }
-        return "";
+      case "email": {
+        const result = validateUniversityEmail(value);
+        return result.error;
+      }
       
-      case "otp":
-        if (!value) return "کد تأیید الزامی است";
-        if (!/^\d+$/.test(value)) return "کد تأیید باید عددی باشد";
-        if (value.length !== OTP_LENGTH) return `کد تأیید باید ${OTP_LENGTH} رقم باشد`;
-        return "";
+      case "otp": {
+        const result = validateOtp(value);
+        return result.error;
+      }
       
-      case "password":
-        if (!value) return "رمز عبور جدید الزامی است";
-        if (value.length < 8) return "رمز عبور باید حداقل ۸ کاراکتر باشد";
-        return "";
+      case "password": {
+        const result = validatePassword(value, { email: allData.email });
+        return result.error;
+      }
       
-      case "confirmPassword":
-        if (!value) return "تکرار رمز عبور الزامی است";
-        if (value !== allData.password) return "رمز عبور و تکرار آن مطابقت ندارند";
-        return "";
+      case "confirmPassword": {
+        const result = validateConfirmPassword(allData.password, value);
+        return result.error;
+      }
       
       default:
         return "";
@@ -107,6 +102,15 @@ export default function ResetPassword() {
       const error = validateField(name, value, { ...formData, [name]: value });
       setErrors((prev) => ({ ...prev, [name]: error }));
     }
+    
+    // Also revalidate confirm password when password changes
+    if (name === "password" && touched.confirmPassword) {
+      const confirmError = validateField("confirmPassword", formData.confirmPassword, { 
+        ...formData, 
+        password: value 
+      });
+      setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
+    }
   };
 
   const handleOtpChange = (value) => {
@@ -114,8 +118,8 @@ export default function ResetPassword() {
     setSubmitError("");
     
     if (touched.otp) {
-      const error = validateField("otp", value);
-      setErrors((prev) => ({ ...prev, otp: error }));
+      const result = validateOtp(value);
+      setErrors((prev) => ({ ...prev, otp: result.error }));
     }
   };
 
@@ -129,14 +133,16 @@ export default function ResetPassword() {
 
   const handleOtpBlur = () => {
     setTouched((prev) => ({ ...prev, otp: true }));
-    const error = validateField("otp", formData.otp);
-    setErrors((prev) => ({ ...prev, otp: error }));
+    const result = validateOtp(formData.otp);
+    setErrors((prev) => ({ ...prev, otp: result.error }));
   };
 
   const handleResendCode = async () => {
     if (resendCooldown > 0 || isResending) return;
-    if (!isValidEmail(formData.email.trim())) {
-      setErrors((prev) => ({ ...prev, email: "ابتدا ایمیل را وارد کنید" }));
+    
+    const emailResult = validateUniversityEmail(formData.email);
+    if (!emailResult.valid) {
+      setErrors((prev) => ({ ...prev, email: emailResult.error }));
       setTouched((prev) => ({ ...prev, email: true }));
       return;
     }
@@ -144,7 +150,7 @@ export default function ResetPassword() {
     setIsResending(true);
     
     try {
-      await forgotPassword({ email: formData.email.trim() });
+      await forgotPassword({ email: normalizeEmail(formData.email) });
       setResendCooldown(RESEND_COOLDOWN);
     } catch {
       // Privacy-friendly: don't show errors
@@ -181,7 +187,7 @@ export default function ResetPassword() {
     
     try {
       await resetPassword({
-        email: formData.email.trim(),
+        email: normalizeEmail(formData.email),
         otp: formData.otp,
         newPassword: formData.password,
       });
@@ -201,11 +207,10 @@ export default function ResetPassword() {
   
   // Check if form is valid
   const isFormValid = 
-    isValidEmail(formData.email.trim()) &&
-    formData.otp.length === OTP_LENGTH &&
-    /^\d+$/.test(formData.otp) &&
-    formData.password.length >= 8 &&
-    formData.confirmPassword === formData.password;
+    validateUniversityEmail(formData.email).valid &&
+    validateOtp(formData.otp).valid &&
+    validatePassword(formData.password, { email: formData.email }).valid &&
+    validateConfirmPassword(formData.password, formData.confirmPassword).valid;
 
   if (isSuccess) {
     return (
@@ -318,9 +323,9 @@ export default function ResetPassword() {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 className={errors.password && touched.password ? "input-error" : ""}
-                placeholder="حداقل ۸ کاراکتر"
+                placeholder="حداقل ۱۰ کاراکتر"
                 dir="ltr"
-                aria-describedby={errors.password ? "password-error" : "password-hint"}
+                aria-describedby="password-requirements"
                 aria-invalid={errors.password && touched.password ? "true" : "false"}
                 autoComplete="new-password"
               />
@@ -334,6 +339,7 @@ export default function ResetPassword() {
               </button>
             </div>
             
+            {/* Password Strength Indicator */}
             {formData.password && (
               <div className="password-strength">
                 <div className="strength-bar">
@@ -350,16 +356,53 @@ export default function ResetPassword() {
                 </span>
               </div>
             )}
+
+            {/* Password Requirements Checklist */}
+            {(formData.password || touched.password) && (
+              <div className="password-requirements" id="password-requirements">
+                <p className="requirements-title">الزامات رمز عبور:</p>
+                <ul className="requirements-list">
+                  <li className={passwordRequirements.minLength.met ? "met" : ""}>
+                    <span className="check-icon">{passwordRequirements.minLength.met ? "✓" : "○"}</span>
+                    {passwordRequirements.minLength.label}
+                  </li>
+                  <li className={passwordRequirements.categoriesCount.met ? "met" : ""}>
+                    <span className="check-icon">{passwordRequirements.categoriesCount.met ? "✓" : "○"}</span>
+                    {passwordRequirements.categoriesCount.label}
+                    <ul className="sub-requirements">
+                      <li className={passwordRequirements.hasLowercase.met ? "met" : ""}>
+                        <span className="check-icon">{passwordRequirements.hasLowercase.met ? "✓" : "○"}</span>
+                        {passwordRequirements.hasLowercase.label}
+                      </li>
+                      <li className={passwordRequirements.hasUppercase.met ? "met" : ""}>
+                        <span className="check-icon">{passwordRequirements.hasUppercase.met ? "✓" : "○"}</span>
+                        {passwordRequirements.hasUppercase.label}
+                      </li>
+                      <li className={passwordRequirements.hasDigit.met ? "met" : ""}>
+                        <span className="check-icon">{passwordRequirements.hasDigit.met ? "✓" : "○"}</span>
+                        {passwordRequirements.hasDigit.label}
+                      </li>
+                      <li className={passwordRequirements.hasSymbol.met ? "met" : ""}>
+                        <span className="check-icon">{passwordRequirements.hasSymbol.met ? "✓" : "○"}</span>
+                        {passwordRequirements.hasSymbol.label}
+                      </li>
+                    </ul>
+                  </li>
+                  <li className={passwordRequirements.noLeadingTrailingSpaces.met ? "met" : ""}>
+                    <span className="check-icon">{passwordRequirements.noLeadingTrailingSpaces.met ? "✓" : "○"}</span>
+                    {passwordRequirements.noLeadingTrailingSpaces.label}
+                  </li>
+                  <li className={passwordRequirements.noPersonalInfo.met ? "met" : ""}>
+                    <span className="check-icon">{passwordRequirements.noPersonalInfo.met ? "✓" : "○"}</span>
+                    {passwordRequirements.noPersonalInfo.label}
+                  </li>
+                </ul>
+              </div>
+            )}
             
             {errors.password && touched.password && (
               <span className="error-message" id="password-error" role="alert">
                 {errors.password}
-              </span>
-            )}
-            
-            {!errors.password && (
-              <span className="hint" id="password-hint">
-                ترکیب حروف بزرگ، کوچک، اعداد و نمادها امنیت بیشتری دارد
               </span>
             )}
           </div>
@@ -427,4 +470,3 @@ export default function ResetPassword() {
     </div>
   );
 }
-
