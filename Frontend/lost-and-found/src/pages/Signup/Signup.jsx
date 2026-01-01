@@ -1,0 +1,429 @@
+import { useState, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { signup } from "../../services/api";
+import "./Signup.css";
+
+// Password strength calculator
+function getPasswordStrength(password) {
+  if (!password) return { level: 0, label: "", color: "" };
+  
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+  if (score <= 1) return { level: 1, label: "ضعیف", color: "#ef4444" };
+  if (score <= 2) return { level: 2, label: "متوسط", color: "#f59e0b" };
+  if (score <= 3) return { level: 3, label: "خوب", color: "#3b82f6" };
+  return { level: 4, label: "قوی", color: "#16a34a" };
+}
+
+// Email validation
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+export default function Signup() {
+  const navigate = useNavigate();
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    fullName: "",
+    studentId: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    acceptTerms: false,
+  });
+
+  // UI state
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  // Validation
+  const validateField = useCallback((name, value, allData = formData) => {
+    switch (name) {
+      case "fullName":
+        if (!value.trim()) return "نام و نام خانوادگی الزامی است";
+        if (value.trim().length < 3) return "نام باید حداقل ۳ کاراکتر باشد";
+        return "";
+      
+      case "studentId":
+        if (!value.trim()) return "شماره دانشجویی الزامی است";
+        if (!/^\d{8,9}$/.test(value.trim())) return "شماره دانشجویی باید ۸ یا ۹ رقم باشد";
+        return "";
+      
+      case "email":
+        if (!value.trim()) return "ایمیل الزامی است";
+        if (!isValidEmail(value)) return "فرمت ایمیل نامعتبر است";
+        return "";
+      
+      case "password":
+        if (!value) return "رمز عبور الزامی است";
+        if (value.length < 8) return "رمز عبور باید حداقل ۸ کاراکتر باشد";
+        return "";
+      
+      case "confirmPassword":
+        if (!value) return "تکرار رمز عبور الزامی است";
+        if (value !== allData.password) return "رمز عبور و تکرار آن مطابقت ندارند";
+        return "";
+      
+      case "acceptTerms":
+        if (!value) return "پذیرش قوانین الزامی است";
+        return "";
+      
+      default:
+        return "";
+    }
+  }, [formData]);
+
+  const validateForm = useCallback(() => {
+    const newErrors = {};
+    Object.keys(formData).forEach((key) => {
+      const error = validateField(key, formData[key], formData);
+      if (error) newErrors[key] = error;
+    });
+    return newErrors;
+  }, [formData, validateField]);
+
+  // Handlers
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const newValue = type === "checkbox" ? checked : value;
+    
+    setFormData((prev) => ({ ...prev, [name]: newValue }));
+    setSubmitError("");
+    
+    // Real-time validation for touched fields
+    if (touched[name]) {
+      const error = validateField(name, newValue, { ...formData, [name]: newValue });
+      setErrors((prev) => ({ ...prev, [name]: error }));
+    }
+  };
+
+  const handleBlur = (e) => {
+    const { name, value, type, checked } = e.target;
+    const newValue = type === "checkbox" ? checked : value;
+    
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    const error = validateField(name, newValue);
+    setErrors((prev) => ({ ...prev, [name]: error }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Mark all fields as touched
+    const allTouched = {};
+    Object.keys(formData).forEach((key) => (allTouched[key] = true));
+    setTouched(allTouched);
+    
+    // Validate all fields
+    const formErrors = validateForm();
+    setErrors(formErrors);
+    
+    if (Object.keys(formErrors).length > 0) return;
+    
+    setIsSubmitting(true);
+    setSubmitError("");
+    
+    try {
+      await signup({
+        fullName: formData.fullName,
+        studentId: formData.studentId,
+        email: formData.email,
+        password: formData.password,
+      });
+      
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (error) {
+      setSubmitError(error.message || "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
+  
+  // Check if form is valid - simplified check
+  const isFormValid = 
+    formData.fullName.trim().length >= 3 &&
+    /^\d{8,9}$/.test(formData.studentId.trim()) &&
+    isValidEmail(formData.email) &&
+    formData.password.length >= 8 &&
+    formData.confirmPassword === formData.password &&
+    formData.acceptTerms;
+
+  if (submitSuccess) {
+    return (
+      <div className="signup-container">
+        <div className="signup-card success-card">
+          <div className="success-icon">✓</div>
+          <h2>ثبت‌نام با موفقیت انجام شد!</h2>
+          <p>در حال انتقال به صفحه ورود...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="signup-container">
+      <div className="signup-card">
+        <div className="signup-header">
+          <div className="logo-icon">🎓</div>
+          <h1>ثبت‌نام دانشجو</h1>
+          <p>به سامانه اشیاء گم‌شده دانشگاه خوش آمدید</p>
+        </div>
+
+        {submitError && (
+          <div className="alert alert-error" role="alert">
+            <span className="alert-icon">⚠</span>
+            {submitError}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} noValidate>
+          {/* Full Name */}
+          <div className="form-group">
+            <label htmlFor="fullName">
+              نام و نام خانوادگی
+              <span className="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="fullName"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={errors.fullName && touched.fullName ? "input-error" : ""}
+              placeholder="مثال: علی محمدی"
+              aria-describedby={errors.fullName ? "fullName-error" : undefined}
+              aria-invalid={errors.fullName && touched.fullName ? "true" : "false"}
+              autoComplete="name"
+            />
+            {errors.fullName && touched.fullName && (
+              <span className="error-message" id="fullName-error" role="alert">
+                {errors.fullName}
+              </span>
+            )}
+          </div>
+
+          {/* Student ID */}
+          <div className="form-group">
+            <label htmlFor="studentId">
+              شماره دانشجویی
+              <span className="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="studentId"
+              name="studentId"
+              value={formData.studentId}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={errors.studentId && touched.studentId ? "input-error" : ""}
+              placeholder="مثال: 401106041"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              aria-describedby={errors.studentId ? "studentId-error" : undefined}
+              aria-invalid={errors.studentId && touched.studentId ? "true" : "false"}
+              autoComplete="off"
+            />
+            {errors.studentId && touched.studentId && (
+              <span className="error-message" id="studentId-error" role="alert">
+                {errors.studentId}
+              </span>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="form-group">
+            <label htmlFor="email">
+              ایمیل
+              <span className="required">*</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              className={errors.email && touched.email ? "input-error" : ""}
+              placeholder="example@gmail.com"
+              dir="ltr"
+              aria-describedby={errors.email ? "email-error" : undefined}
+              aria-invalid={errors.email && touched.email ? "true" : "false"}
+              autoComplete="email"
+            />
+            {errors.email && touched.email && (
+              <span className="error-message" id="email-error" role="alert">
+                {errors.email}
+              </span>
+            )}
+          </div>
+
+          {/* Password */}
+          <div className="form-group">
+            <label htmlFor="password">
+              رمز عبور
+              <span className="required">*</span>
+            </label>
+            <div className="password-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={errors.password && touched.password ? "input-error" : ""}
+                placeholder="حداقل ۸ کاراکتر"
+                dir="ltr"
+                aria-describedby={errors.password ? "password-error" : "password-hint"}
+                aria-invalid={errors.password && touched.password ? "true" : "false"}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
+              >
+                {showPassword ? "🙈" : "👁"}
+              </button>
+            </div>
+            
+            {formData.password && (
+              <div className="password-strength">
+                <div className="strength-bar">
+                  <div
+                    className="strength-fill"
+                    style={{
+                      width: `${(passwordStrength.level / 4) * 100}%`,
+                      backgroundColor: passwordStrength.color,
+                    }}
+                  />
+                </div>
+                <span className="strength-label" style={{ color: passwordStrength.color }}>
+                  {passwordStrength.label}
+                </span>
+              </div>
+            )}
+            
+            {errors.password && touched.password && (
+              <span className="error-message" id="password-error" role="alert">
+                {errors.password}
+              </span>
+            )}
+            
+            {!errors.password && (
+              <span className="hint" id="password-hint">
+                ترکیب حروف بزرگ، کوچک، اعداد و نمادها امنیت بیشتری دارد
+              </span>
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <div className="form-group">
+            <label htmlFor="confirmPassword">
+              تکرار رمز عبور
+              <span className="required">*</span>
+            </label>
+            <div className="password-wrapper">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={errors.confirmPassword && touched.confirmPassword ? "input-error" : ""}
+                placeholder="رمز عبور را مجدداً وارد کنید"
+                dir="ltr"
+                aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
+                aria-invalid={errors.confirmPassword && touched.confirmPassword ? "true" : "false"}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
+              >
+                {showConfirmPassword ? "🙈" : "👁"}
+              </button>
+            </div>
+            {errors.confirmPassword && touched.confirmPassword && (
+              <span className="error-message" id="confirmPassword-error" role="alert">
+                {errors.confirmPassword}
+              </span>
+            )}
+          </div>
+
+          {/* Terms Checkbox */}
+          <div className="form-group checkbox-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                name="acceptTerms"
+                checked={formData.acceptTerms}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                aria-describedby={errors.acceptTerms ? "terms-error" : undefined}
+              />
+              <span className="checkbox-custom" />
+              <span>
+                <a href="/terms" target="_blank" rel="noopener noreferrer">
+                  قوانین و مقررات
+                </a>{" "}
+                را مطالعه کردم و می‌پذیرم
+              </span>
+            </label>
+            {errors.acceptTerms && touched.acceptTerms && (
+              <span className="error-message" id="terms-error" role="alert">
+                {errors.acceptTerms}
+              </span>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="submit-btn"
+            disabled={!isFormValid || isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <span className="spinner" />
+                در حال ثبت‌نام...
+              </>
+            ) : (
+              "ثبت‌نام"
+            )}
+          </button>
+        </form>
+
+        <div className="signup-footer">
+          <p>
+            قبلاً ثبت‌نام کرده‌اید؟{" "}
+            <Link to="/login">وارد شوید</Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
