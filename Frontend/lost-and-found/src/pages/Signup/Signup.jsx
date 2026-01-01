@@ -32,7 +32,6 @@ export default function Signup() {
   // Form state
   const [formData, setFormData] = useState({
     fullName: "",
-    studentId: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -54,11 +53,6 @@ export default function Signup() {
       case "fullName":
         if (!value.trim()) return "نام و نام خانوادگی الزامی است";
         if (value.trim().length < 3) return "نام باید حداقل ۳ کاراکتر باشد";
-        return "";
-      
-      case "studentId":
-        if (!value.trim()) return "شماره دانشجویی الزامی است";
-        if (!/^\d{8,9}$/.test(value.trim())) return "شماره دانشجویی باید ۸ یا ۹ رقم باشد";
         return "";
       
       case "email":
@@ -138,7 +132,6 @@ export default function Signup() {
     try {
       await signup({
         fullName: formData.fullName,
-        studentId: formData.studentId,
         email: formData.email,
         password: formData.password,
       });
@@ -159,7 +152,6 @@ export default function Signup() {
   // Check if form is valid - simplified check
   const isFormValid = 
     formData.fullName.trim().length >= 3 &&
-    /^\d{8,9}$/.test(formData.studentId.trim()) &&
     isValidEmail(formData.email) &&
     formData.password.length >= 8 &&
     formData.confirmPassword === formData.password &&
@@ -216,34 +208,6 @@ export default function Signup() {
             {errors.fullName && touched.fullName && (
               <span className="error-message" id="fullName-error" role="alert">
                 {errors.fullName}
-              </span>
-            )}
-          </div>
-
-          {/* Student ID */}
-          <div className="form-group">
-            <label htmlFor="studentId">
-              شماره دانشجویی
-              <span className="required">*</span>
-            </label>
-            <input
-              type="text"
-              id="studentId"
-              name="studentId"
-              value={formData.studentId}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              className={errors.studentId && touched.studentId ? "input-error" : ""}
-              placeholder="مثال: 401106041"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              aria-describedby={errors.studentId ? "studentId-error" : undefined}
-              aria-invalid={errors.studentId && touched.studentId ? "true" : "false"}
-              autoComplete="off"
-            />
-            {errors.studentId && touched.studentId && (
-              <span className="error-message" id="studentId-error" role="alert">
-                {errors.studentId}
               </span>
             )}
           </div>

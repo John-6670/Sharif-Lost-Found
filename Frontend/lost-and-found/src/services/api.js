@@ -59,8 +59,7 @@ function getErrorMessage(status) {
  * Sign up a new student
  * @param {Object} userData - User registration data
  * @param {string} userData.fullName - Student's full name
- * @param {string} userData.studentId - Student ID number
- * @param {string} userData.email - University email
+ * @param {string} userData.email - User email
  * @param {string} userData.password - Password
  * @returns {Promise<Object>} - Response from server
  */
@@ -122,7 +121,7 @@ export async function getCurrentUser() {
 /**
  * Request password reset OTP
  * @param {Object} data - Request data
- * @param {string} data.identifier - User email or student ID
+ * @param {string} data.email - User email
  * @returns {Promise<Object>} - Response from server
  */
 export async function forgotPassword(data) {
@@ -135,7 +134,7 @@ export async function forgotPassword(data) {
 /**
  * Reset password with OTP verification
  * @param {Object} data - Reset data
- * @param {string} data.identifier - User email or student ID
+ * @param {string} data.email - User email
  * @param {string} data.otp - OTP code received
  * @param {string} data.newPassword - New password to set
  * @returns {Promise<Object>} - Response from server
