@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
 from .models import User
 
@@ -45,3 +47,20 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('User not verified')
         attrs['user'] = user
         return attrs
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+
+    def validate(self, attrs):
+        # first, authenticate normally
+        data = super().validate(attrs)
+
+        # replace `is_active` check with your `is_verified`
+        user = self.user
+        if not getattr(user, "is_verified", False):
+            raise AuthenticationFailed("Account is not verified.", "no_active_account")
+
+        data["user_id"] = str(user.id)
+        data["email"] = user.email
+
+        return data

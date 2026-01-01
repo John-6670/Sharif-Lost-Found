@@ -1,10 +1,8 @@
-from asyncio import AbstractEventLoop
-
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import RegistrationOTP, User
 from .serializers import (
@@ -12,11 +10,11 @@ from .serializers import (
     OTPVerifySerializer,
     ResendOTPSerializer,
     UserPublicSerializer,
-    LoginSerializer
+    LoginSerializer,
+    CustomTokenObtainPairSerializer
 )
 from .utils import generate_otp, send_otp
 from .throttles import OTPIPRateThrottle, OTPEmailRateThrottle, OTPVerifyRateThrottle
-
 
 
 class RegisterRequestView(APIView):
@@ -124,4 +122,13 @@ class LoginView(APIView):
 
         user = serializer.validated_data['user']
         return Response(UserPublicSerializer(user).data, status=status.HTTP_200_OK)
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    pass
+
 

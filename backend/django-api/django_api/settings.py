@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 import os
@@ -143,15 +143,18 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
 }
-# REST_FRAMEWORK.update({
-#     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-# })
-# SPECTACULAR_SETTINGS = {
-#     'TITLE': 'Django API',
-#     'DESCRIPTION': 'Auto-generated API documentation',
-#     'VERSION': '1.0.0',
-# }
+
+SIMPLE_JWT = {
+    "ALGORITHM": "RS256",
+    "SIGNING_KEY": open(BASE_DIR / "secrets/private.pem").read(),
+    "VERIFYING_KEY": open(BASE_DIR / "secrets/public.pem").read(),
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+}
 
 # OTP Settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
