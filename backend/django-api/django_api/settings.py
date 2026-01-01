@@ -41,7 +41,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third party apps
     'rest_framework',
+    'drf_yasg',
+    # Local apps
     'users',
 ]
 
@@ -136,8 +139,19 @@ REST_FRAMEWORK = {
         'otp_ip': '2/m',
         'otp_email': '24/h',
         'otp_verify': '30/h',
-    }
+    },
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
 }
+# REST_FRAMEWORK.update({
+#     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+# })
+# SPECTACULAR_SETTINGS = {
+#     'TITLE': 'Django API',
+#     'DESCRIPTION': 'Auto-generated API documentation',
+#     'VERSION': '1.0.0',
+# }
 
 # OTP Settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

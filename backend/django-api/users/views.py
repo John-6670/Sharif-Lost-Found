@@ -2,101 +2,107 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from django.utils import timezone
-from datetime import timedelta
+from drf_yasg.utils import swagger_auto_schema
 
 from .models import RegistrationOTP, User
-from .serializers import OTPRequestSerializer, OTPVerifySerializer
+from .serializers import (
+    OTPRequestSerializer,
+    OTPVerifySerializer,
+    ResendOTPSerializer,
+    UserPublicSerializer,
+)
 from .utils import generate_otp, send_otp
 from .throttles import OTPIPRateThrottle, OTPEmailRateThrottle, OTPVerifyRateThrottle
 
 
+
 class RegisterRequestView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [
-        OTPIPRateThrottle,
-        OTPEmailRateThrottle,
-    ]
+    throttle_classes = [OTPIPRateThrottle, OTPEmailRateThrottle]
 
+    @swagger_auto_schema(
+        request_body=OTPRequestSerializer,
+        responses={200: 'OTP sent to email', 400: 'Validation error'},
+    )
     def post(self, request):
         serializer = OTPRequestSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            name = serializer.validated_data['name']
-            password = serializer.validated_data['password']
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create user
-            user = User.objects.create_user(email=email, name=name, password=password)
+        email = serializer.validated_data['email']
+        name = serializer.validated_data['name']
+        password = serializer.validated_data['password']
 
-            # Delete any old OTP for this email
-            RegistrationOTP.objects.filter(email=email).delete()
+        user, _ = User.objects.get_or_create(email=email, defaults={'name': name})
+        user.set_password(password)
+        user.save()
 
-            # Generate and hash OTP
-            otp = generate_otp()
-            otp_obj, _ = RegistrationOTP.objects.update_or_create(email=email)
-            otp_obj.set_otp(otp)
-            otp_obj.save()
+        RegistrationOTP.objects.filter(email=email).delete()
+        otp = generate_otp()
+        otp_obj, _ = RegistrationOTP.objects.update_or_create(email=email)
+        otp_obj.set_otp(otp)
+        otp_obj.save()
 
-            send_otp(email, otp, name)
-            return Response({'message': 'OTP sent to email'}, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        send_otp(email, otp, name)
+        return Response({'message': 'OTP sent to email'}, status=status.HTTP_200_OK)
 
 
 class RegisterVerifyView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [OTPVerifyRateThrottle]
 
+    @swagger_auto_schema(
+        request_body=OTPVerifySerializer,
+        responses={201: UserPublicSerializer, 400: 'Invalid or expired OTP'},
+    )
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            otp = serializer.validated_data['otp']
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-            try:
-                otp_obj = RegistrationOTP.objects.get(email=email)
-            except RegistrationOTP.DoesNotExist:
-                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        email = serializer.validated_data['email']
+        otp = serializer.validated_data['otp']
 
-            # Check expiration
-            if otp_obj.is_verified():
-                return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            otp_obj = RegistrationOTP.objects.get(email=email)
+        except RegistrationOTP.DoesNotExist:
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Verify OTP hash
-            if not otp_obj.verify_otp(otp):
-                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        if otp_obj.is_expired():
+            otp_obj.delete()
+            return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Mark user as verified
-            user = User.objects.filter(email=email).first()
-            if not user:
-                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        if not otp_obj.verify_otp(otp):
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
-            user.verified = True
-            user.save()
+        user = User.objects.filter(email=email).first()
+        if not user:
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
-            otp_obj.delete()  # Delete OTP after use
-            return Response({'message': 'User registered and verified'}, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        user.verified = True
+        user.save()
+        otp_obj.delete()
+        return Response(UserPublicSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
 class ResendOTPView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [
-        OTPIPRateThrottle,
-        OTPEmailRateThrottle,
-    ]
+    throttle_classes = [OTPIPRateThrottle, OTPEmailRateThrottle]
 
+    @swagger_auto_schema(
+        request_body=ResendOTPSerializer,
+        responses={200: 'OTP resent to email', 400: 'User not found or already verified'},
+    )
     def post(self, request):
-        email = request.data.get('email')
-        if not email:
-            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ResendOTPSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        email = serializer.validated_data['email']
         user = User.objects.filter(email=email).first()
         if not user or user.verified:
             return Response({'error': 'User not found or already verified'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Generate and hash new OTP
         otp = generate_otp()
         otp_obj, _ = RegistrationOTP.objects.update_or_create(email=email)
         otp_obj.set_otp(otp)
