@@ -119,3 +119,31 @@ export async function getCurrentUser() {
   });
 }
 
+/**
+ * Request password reset OTP
+ * @param {Object} data - Request data
+ * @param {string} data.identifier - User email or student ID
+ * @returns {Promise<Object>} - Response from server
+ */
+export async function forgotPassword(data) {
+  return fetchAPI("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Reset password with OTP verification
+ * @param {Object} data - Reset data
+ * @param {string} data.identifier - User email or student ID
+ * @param {string} data.otp - OTP code received
+ * @param {string} data.newPassword - New password to set
+ * @returns {Promise<Object>} - Response from server
+ */
+export async function resetPassword(data) {
+  return fetchAPI("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
