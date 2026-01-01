@@ -64,3 +64,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data["email"] = user.email
 
         return data
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(write_only=True, min_length=8)

@@ -6,7 +6,9 @@ from .views import (
     ResendOTPView,
     LoginView,
     CustomTokenObtainPairView,
-    CustomTokenRefreshView
+    CustomTokenRefreshView,
+    PasswordResetRequestView,
+    PasswordResetConfirmView,
 )
 
 
@@ -17,4 +19,6 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
+    path('password-reset/request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]
