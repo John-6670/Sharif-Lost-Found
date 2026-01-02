@@ -25,7 +25,7 @@ public class ProductServiceImp implements ProductService {
     private final ProductMapper productMapper;
 
     @Override
-    public ProductResponseDto addProduct(ProductRequestDto request) {
+    public ProductResponseDto addProduct(ProductRequestDto request, String authenticatedUserEmail) {
 
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");
@@ -47,10 +47,11 @@ public class ProductServiceImp implements ProductService {
             throw new IllegalArgumentException("Type of report is required");
         }
 
-        Optional<User> user = userRepository.findByEmail(request.getUserEmail());
+        // Use authenticated user email instead of request email
+        Optional<User> user = userRepository.findByEmail(authenticatedUserEmail);
 
         if (user.isEmpty()) {
-            throw new IllegalArgumentException("User not found");
+            throw new IllegalArgumentException("Authenticated user not found");
         }
 
         Location location = Location.builder()
@@ -66,19 +67,26 @@ public class ProductServiceImp implements ProductService {
     }
 
     @Override
-    public ProductResponseDto deleteProduct(Long productId) {
+    public ProductResponseDto deleteProduct(Long productId, String authenticatedUserEmail) {
 
         Optional<Product> product = productRepository.findById(productId);
         if (product.isEmpty()) {
             throw new IllegalArgumentException("Product not found");
         }
+
+        // Verify that the product belongs to the authenticated user
+        Product foundProduct = product.get();
+        if (!foundProduct.getUser().getEmail().equals(authenticatedUserEmail)) {
+            throw new SecurityException("You are not authorized to delete this product");
+        }
+
         productRepository.deleteById(productId);
 
-        return productMapper.toDto(product.get());
+        return productMapper.toDto(foundProduct);
     }
 
     @Override
-    public ProductResponseDto updateProduct(Long productId, ProductRequestDto request) {
+    public ProductResponseDto updateProduct(Long productId, ProductRequestDto request, String authenticatedUserEmail) {
 
         Optional<Product> product = productRepository.findById(productId);
 
@@ -87,16 +95,13 @@ public class ProductServiceImp implements ProductService {
         }
         Product foundProduct = product.get();
 
-        if (request.getProductName() != null) {
-            foundProduct.setProductName(request.getProductName());
+        // Verify that the product belongs to the authenticated user
+        if (!foundProduct.getUser().getEmail().equals(authenticatedUserEmail)) {
+            throw new SecurityException("You are not authorized to update this product");
         }
 
-        if (request.getUserEmail() != null) {
-            Optional<User> user = userRepository.findByEmail(request.getUserEmail());
-            if (user.isEmpty()) {
-                throw new IllegalArgumentException("User not found");
-            }
-            foundProduct.setUser(user.get());
+        if (request.getProductName() != null) {
+            foundProduct.setProductName(request.getProductName());
         }
 
         if (request.getDescription() != null) {

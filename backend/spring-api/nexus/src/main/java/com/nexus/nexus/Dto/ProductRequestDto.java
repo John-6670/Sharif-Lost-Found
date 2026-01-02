@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class ProductRequestDto {
 
     private String productName;
-    private String userEmail;
     private String description;
     private TypeOfReport typeOfReport;
     private Status status;

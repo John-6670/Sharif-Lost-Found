@@ -7,9 +7,9 @@ import org.springframework.stereotype.Service;
 @Service
 public interface ProductService {
 
-    ProductResponseDto addProduct(ProductRequestDto request);
+    ProductResponseDto addProduct(ProductRequestDto request, String authenticatedUserEmail);
 
-    ProductResponseDto deleteProduct(Long ProductId);
+    ProductResponseDto deleteProduct(Long productId, String authenticatedUserEmail);
 
-    ProductResponseDto updateProduct(Long productId, ProductRequestDto request);
+    ProductResponseDto updateProduct(Long productId, ProductRequestDto request, String authenticatedUserEmail);
 }
