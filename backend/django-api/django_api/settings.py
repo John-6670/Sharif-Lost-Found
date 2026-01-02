@@ -150,8 +150,8 @@ REST_FRAMEWORK = {
 
 SIMPLE_JWT = {
     "ALGORITHM": "RS256",
-    "SIGNING_KEY": open(BASE_DIR / "secrets/private.pem").read(),
-    "VERIFYING_KEY": open(BASE_DIR / "secrets/public.pem").read(),
+    "SIGNING_KEY": open(BASE_DIR / "keys/private.pem").read(),
+    "VERIFYING_KEY": open(BASE_DIR / "keys/public.pem").read(),
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
