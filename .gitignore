@@ -25,8 +25,9 @@ build/
 .venv/
 
 # keys
-secrets/private.pem
+/backend/django-api/keys/private.pem
 
 # postamn
 postman/
 .postman
+
