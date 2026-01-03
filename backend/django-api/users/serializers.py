@@ -17,7 +17,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'created_at', 'verified']
+        fields = ['id', 'email', 'name', 'created_at', 'is_verified']
 
 
 class OTPRequestSerializer(serializers.Serializer):
