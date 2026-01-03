@@ -9,92 +9,81 @@ import {
 } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import L from "leaflet";
+
 import "leaflet/dist/leaflet.css";
 import "../assets/Map.css";
 
-function getLostItems() {
-  return Promise.resolve([
-    {
-      id: 1,
-      name: "لپتاپ",
-      x: 35.702831,
-      y: 51.3516,
-      timestamp: "2025-01-01T09:30:00",
-      category: "electronics",
-    },
-    {
-      id: 4,
-      name: "موبایل",
-      x: 35.70231,
-      y: 51.3516,
-      timestamp: "2025-01-01T09:30:00",
-      category: "electronics",
-    },
-    {
-      id: 2,
-      name: "جزوه",
-      x: 35.7041,
-      y: 51.3499,
-      timestamp: "2025-01-02T14:10:00",
-      category: "documents",
-    },
-    {
-      id: 3,
-      name: "شلوار جین",
-      x: 35.7032,
-      y: 51.3504,
-      timestamp: "2025-01-03T18:20:00",
-      category: "clothing",
-    },
-  ]);
+/* ================== config ================== */
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const TILE_URL = import.meta.env.VITE_MAP_TILE_URL;
+const TILE_ATTR = import.meta.env.VITE_MAP_ATTRIBUTION;
+
+/* ================== api ================== */
+async function getLostItems() {
+  const res = await fetch(`${API_BASE}/lost-items`);
+  if (!res.ok) throw new Error("Failed to fetch items");
+  return res.json();
 }
 
+async function createLostItem(item) {
+  const res = await fetch(`${API_BASE}/lost-items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(item),
+  });
+  if (!res.ok) throw new Error("Failed to create item");
+  return res.json();
+}
 
+/* ================== helpers ================== */
 function markerIcon(category) {
   return L.divIcon({
     className: "",
     html: `<div class="custom-marker marker-${category}"></div>`,
     iconSize: [14, 14],
     iconAnchor: [7, 7],
-    category, // for cluster icon
+    category,
   });
 }
 
-/* ---------- add marker ---------- */
-function AddMarker({ setItems, bounds }) {
+/* ================== map helpers ================== */
+function AddMarker({ bounds, onAdd }) {
   useMapEvents({
-    click(e) {
+    async click(e) {
       const { lat, lng } = e.latlng;
       const [[south, west], [north, east]] = bounds;
 
       if (lat < south || lat > north || lng < west || lng > east) return;
 
-      setItems((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          x: lat,
-          y: lng,
-          timestamp: new Date().toISOString(),
-          category: "other",
-          name: "Item",
-        },
-      ]);
+      const item = {
+        name: "Item",
+        x: lat,
+        y: lng,
+        category: "other",
+        timestamp: new Date().toISOString(),
+      };
+
+      const saved = await createLostItem(item);
+      onAdd(saved);
     },
   });
+
   return null;
 }
-
 
 function FlyToMarker({ item }) {
   const map = useMap();
+
   useEffect(() => {
-    if (item) map.flyTo([item.x, item.y], 19, { duration: 0.8 });
+    if (item) {
+      map.flyTo([item.x, item.y], 18, { duration: 0.8 });
+    }
   }, [item, map]);
+
   return null;
 }
 
-/* ---------- sidebar ---------- */
+/* ================== sidebar ================== */
 function Sidebar({
   items,
   selectedId,
@@ -108,7 +97,7 @@ function Sidebar({
       <h3>Lost Items</h3>
 
       <div className="filter-section">
-        <strong>Filter by Category:</strong>
+        <strong>Filter by Category</strong>
         {categories.map((cat) => (
           <label key={cat} className="filter-label">
             <input
@@ -122,14 +111,18 @@ function Sidebar({
       </div>
 
       {items
-        .filter((item) => selectedCategories.includes(item.category))
+        .filter((i) => selectedCategories.includes(i.category))
         .map((item) => (
           <div
             key={item.id}
-            className={`item-card ${item.id === selectedId ? "active" : ""}`}
+            className={`item-card ${
+              item.id === selectedId ? "active" : ""
+            }`}
             onClick={() => onSelect(item.id)}
           >
-            <div className={`badge ${item.category}`}>{item.category}</div>
+            <div className={`badge ${item.category}`}>
+              {item.category}
+            </div>
             <div className="item-name">{item.name}</div>
             <div className="item-timestamp">
               {new Date(item.timestamp).toLocaleString()}
@@ -140,7 +133,7 @@ function Sidebar({
   );
 }
 
-/* ---------- main ---------- */
+/* ================== main ================== */
 export default function LostAndFoundMap() {
   const center = [35.702831, 51.3516];
   const delta = 0.0045;
@@ -150,14 +143,19 @@ export default function LostAndFoundMap() {
     [center[0] + delta, center[1] + delta],
   ];
 
+  const categories = ["electronics", "documents", "clothing", "other"];
+
   const [items, setItems] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedCategories, setSelectedCategories] =
+    useState(categories);
+
   const markerRefs = useRef({});
-  const categories = ["electronics", "documents", "clothing", "other"];
-  const [selectedCategories, setSelectedCategories] = useState([...categories]);
 
   useEffect(() => {
-    getLostItems().then(setItems);
+    getLostItems()
+      .then(setItems)
+      .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
@@ -166,11 +164,11 @@ export default function LostAndFoundMap() {
     }
   }, [selectedId]);
 
-  const toggleCategory = (category) => {
+  const toggleCategory = (cat) => {
     setSelectedCategories((prev) =>
-      prev.includes(category)
-        ? prev.filter((c) => c !== category)
-        : [...prev, category]
+      prev.includes(cat)
+        ? prev.filter((c) => c !== cat)
+        : [...prev, cat]
     );
   };
 
@@ -196,30 +194,21 @@ export default function LostAndFoundMap() {
           maxBounds={bounds}
           style={{ width: "100%", height: "100%" }}
         >
-        <TileLayer
-  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-  attribution='&copy; OpenStreetMap contributors'
-/>
-  
-
-
-
-
-
+          <TileLayer url={TILE_URL} attribution={TILE_ATTR} />
 
           <MarkerClusterGroup
-            spiderfyOnMaxZoom={true}
-            showCoverageOnHover={true}
             maxClusterRadius={50}
             iconCreateFunction={(cluster) => {
               const markers = cluster.getAllChildMarkers();
-              const categoryCounts = markers.reduce((acc, m) => {
-                const cat = m.options.icon.options.category || "other";
-                acc[cat] = (acc[cat] || 0) + 1;
-                return acc;
-              }, {});
+              const counts = {};
 
-              const dots = Object.entries(categoryCounts)
+              markers.forEach((m) => {
+                const cat =
+                  m.options.icon.options.category || "other";
+                counts[cat] = (counts[cat] || 0) + 1;
+              });
+
+              const dots = Object.entries(counts)
                 .map(
                   ([cat, count]) =>
                     `<span class="cluster-dot ${cat}" title="${cat}: ${count}"></span>`
@@ -227,25 +216,34 @@ export default function LostAndFoundMap() {
                 .join("");
 
               return L.divIcon({
-                html: `<div class="custom-cluster">${dots}<div class="cluster-count">${cluster.getChildCount()}</div></div>`,
+                html: `<div class="custom-cluster">
+                         ${dots}
+                         <div class="cluster-count">
+                           ${cluster.getChildCount()}
+                         </div>
+                       </div>`,
                 className: "my-custom-cluster",
-                iconSize: L.point(40, 40),
+                iconSize: [40, 40],
               });
             }}
           >
             {items
-              .filter((item) => selectedCategories.includes(item.category))
+              .filter((i) =>
+                selectedCategories.includes(i.category)
+              )
               .map((item) => (
                 <Marker
                   key={item.id}
                   position={[item.x, item.y]}
                   icon={markerIcon(item.category)}
-                  ref={(ref) => (markerRefs.current[item.id] = ref)}
+                  ref={(ref) =>
+                    (markerRefs.current[item.id] = ref)
+                  }
                 >
                   <Popup>
-                    <b>{item.name}</b>
+                    <strong>{item.name}</strong>
                     <br />
-                    Category: {item.category}
+                    {item.category}
                     <br />
                     {new Date(item.timestamp).toLocaleString()}
                   </Popup>
@@ -253,7 +251,13 @@ export default function LostAndFoundMap() {
               ))}
           </MarkerClusterGroup>
 
-          <AddMarker setItems={setItems} bounds={bounds} />
+          <AddMarker
+            bounds={bounds}
+            onAdd={(item) =>
+              setItems((prev) => [...prev, item])
+            }
+          />
+
           {selectedItem && <FlyToMarker item={selectedItem} />}
         </MapContainer>
       </div>

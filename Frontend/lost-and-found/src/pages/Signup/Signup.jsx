@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerRequest, resendRegistrationOtp, verifyRegistrationOtp } from "../../services/api";
-import OtpInput from "../../components/OtpInput/OtpInput";
+import OtpInput from "../../Components/OtpInput/OtpInput";
 import {
   validateUniversityEmail,
   validatePassword,
