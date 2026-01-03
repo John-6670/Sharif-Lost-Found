@@ -136,7 +136,7 @@ function Sidebar({
 /* ================== main ================== */
 export default function LostAndFoundMap() {
   const center = [35.702831, 51.3516];
-  const delta = 0.0045;
+  const delta = 0.0055;
 
   const bounds = [
     [center[0] - delta, center[1] - delta],
