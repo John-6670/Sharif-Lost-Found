@@ -9,7 +9,7 @@ import Home from './pages/Home/Home';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/Sharif-Lost-Found">
       <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/home" element={<Home />} />
