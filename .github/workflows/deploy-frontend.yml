@@ -1,0 +1,40 @@
+name: Deploy Vite React Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Frontend/lost-and-found/**"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: Frontend/lost-and-found/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Frontend/lost-and-found
+        run: npm ci
+
+      - name: Build
+        working-directory: Frontend/lost-and-found
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: Frontend/lost-and-found/dist
