@@ -1,5 +1,5 @@
 import './App.css'
-import { Routes, Route } from 'react-router-dom'
+import {HashRouter as Router, Routes, Route } from 'react-router-dom'
 import Map from './Components/Map';
 import Signup from './pages/Signup/Signup';
 import Login from './pages/Login/Login';
@@ -9,7 +9,8 @@ import Home from './pages/Home/Home';
 
 function App() {
   return (
-    <Routes>
+    <Router>
+      <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/home" element={<Home />} />
       <Route path="/map" element={<Map />} />
@@ -18,6 +19,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
+    </Router>
   )
 }
 
