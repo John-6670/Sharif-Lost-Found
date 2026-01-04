@@ -1,5 +1,5 @@
 import './App.css'
-import {BrowserRouter, Routes, Route } from 'react-router-dom'
+import {HashRouter ,  Routes, Route } from 'react-router-dom'
 import Map from './Components/Map';
 import Signup from './pages/Signup/Signup';
 import Login from './pages/Login/Login';
@@ -9,7 +9,7 @@ import Home from './pages/Home/Home';
 
 function App() {
   return (
-    <BrowserRouter basename="/Sharif-Lost-Found">
+    <HashRouter>
       <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/home" element={<Home />} />
@@ -19,7 +19,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
