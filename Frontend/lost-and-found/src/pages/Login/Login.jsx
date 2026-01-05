@@ -145,7 +145,7 @@ export default function Login() {
             <div className="alert-content">
               <span>{submitError}</span>
               {showVerifyLink && (
-                <Link to="/signup" className="verify-link">
+                <Link to="/verify-email" className="verify-link">
                   تأیید حساب کاربری
                 </Link>
               )}

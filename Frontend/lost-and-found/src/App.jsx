@@ -7,6 +7,8 @@ import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
 import ResetPassword from './pages/ResetPassword/ResetPassword';
 import Home from './pages/Home/Home';
 import Terms from './pages/Terms/Terms';
+import VerifyEmail from './pages/VerifyEmail/VerifyEmail';
+import Profile from './pages/Profile/Profile';
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/profile" element={<Profile />} />
     </Routes>
   )
 }
