@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resetPassword, forgotPassword } from "../../services/api";
-import OtpInput from "../../components/OtpInput/OtpInput";
+import OtpInput from "../../Components/OtpInput/OtpInput";
 import {
   validateUniversityEmail,
   validatePassword,
