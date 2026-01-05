@@ -606,9 +606,9 @@ export default function Signup() {
               />
               <span className="checkbox-custom" />
               <span>
-                <a href="/terms" target="_blank" rel="noopener noreferrer">
+                <Link to="/terms">
                   قوانین و مقررات
-                </a>{" "}
+                </Link>{" "}
                 را مطالعه کردم و می‌پذیرم
               </span>
             </label>
