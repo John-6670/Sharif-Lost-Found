@@ -201,3 +201,12 @@
   align-items: center;
   justify-content: center;
 }
+
+.simple-error {
+  background: #fee;
+  color: #900;
+  padding: 8px;
+  text-align: center;
+  font-size: 14px;
+}
+
