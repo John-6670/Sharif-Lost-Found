@@ -13,12 +13,12 @@ import java.time.LocalDateTime;
 @Builder
 public class ProductRequestDto {
 
-    private String productName;
+    private String itemName;
     private String description;
-    private TypeOfReport typeOfReport;
+    private TypeOfReport type;
     private Status status;
-    private LocalDateTime lostOrFoundTime;
-    private String deliveredTo;
-    private Double locationX;
-    private Double locationY;
+    private LocalDateTime reportedAt;
+    private String categoryName;
+    private Double locationLongitude;
+    private Double locationLatitude;
 }

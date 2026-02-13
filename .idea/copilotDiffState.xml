@@ -37,15 +37,6 @@
             </PendingDiffInfo>
           </value>
         </entry>
-        <entry key="$PROJECT_DIR$/backend/spring-api/nexus/src/main/resources/application.properties">
-          <value>
-            <PendingDiffInfo>
-              <option name="filePath" value="$PROJECT_DIR$/backend/spring-api/nexus/src/main/resources/application.properties" />
-              <option name="originalContent" value="spring.application.name=nexus&#10;&#10;# H2 Database Configuration&#10;spring.datasource.url=jdbc:h2:mem:lostfounddb&#10;spring.datasource.driverClassName=org.h2.Driver&#10;spring.datasource.username=sa&#10;spring.datasource.password=&#10;&#10;# JPA/Hibernate Configuration&#10;spring.jpa.database-platform=org.hibernate.dialect.H2Dialect&#10;spring.jpa.hibernate.ddl-auto=update&#10;spring.jpa.show-sql=true&#10;spring.jpa.properties.hibernate.format_sql=true&#10;&#10;# H2 Console (for development/debugging)&#10;spring.h2.console.enabled=true&#10;spring.h2.console.path=/h2-console&#10;&#10;# JWT Configuration&#10;# IMPORTANT: This secret must match the JWT secret used in Django backend&#10;# Django handles authentication (register/login), Spring only verifies tokens&#10;jwt.secret=YourSuperSecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLong123456789&#10;jwt.expiration=86400000&#10;" />
-              <option name="updatedContent" value="spring.application.name=nexus&#10;&#10;# H2 Database Configuration&#10;spring.datasource.url=jdbc:h2:mem:lostfounddb&#10;spring.datasource.driverClassName=org.h2.Driver&#10;spring.datasource.username=sa&#10;spring.datasource.password=&#10;&#10;# JPA/Hibernate Configuration&#10;spring.jpa.database-platform=org.hibernate.dialect.H2Dialect&#10;spring.jpa.hibernate.ddl-auto=update&#10;spring.jpa.show-sql=true&#10;spring.jpa.properties.hibernate.format_sql=true&#10;&#10;# H2 Console (for development/debugging)&#10;spring.h2.console.enabled=true&#10;spring.h2.console.path=/h2-console&#10;&#10;# JWT Configuration&#10;# IMPORTANT: This secret must match the JWT secret used in Django backend&#10;# Django handles authentication (register/login), Spring only verifies tokens&#10;jwt.secret=YourSuperSecretKeyForJWTTokenGenerationMustBeAtLeast256BitsLong123456789&#10;jwt.expiration=86400000" />
-            </PendingDiffInfo>
-          </value>
-        </entry>
       </map>
     </option>
   </component>
