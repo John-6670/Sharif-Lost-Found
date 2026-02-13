@@ -1,0 +1,33 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Django stuff
+*.log
+db.sqlite3
+media/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node (for frontend, if in same repo)
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# Environments
+.env
+.venv/
+
+# keys
+/backend/django-api/keys/private.pem
+
+# postamn
+postman/
+.postman
+

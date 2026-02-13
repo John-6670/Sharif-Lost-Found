@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { isAuthenticated, getUserData, clearAuth } from "../../services/auth";
 import "./Home.css";
 
 // Mock data - TODO: Replace with actual API call when backend is ready
@@ -103,12 +104,101 @@ function SkeletonCard() {
   );
 }
 
+/* ========== User Menu Component ========== */
+function UserMenu({ user, onLogout }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Close menu on escape key
+  useEffect(() => {
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, []);
+
+  return (
+    <div className="user-menu" ref={menuRef}>
+      <button
+        className="user-menu-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+      >
+        <span className="user-avatar">👤</span>
+        <span className="user-name">{user?.email?.split("@")[0] || "کاربر"}</span>
+        <span className={`dropdown-arrow ${isOpen ? "open" : ""}`}>▼</span>
+      </button>
+      
+      {isOpen && (
+        <div className="user-dropdown" role="menu">
+          <div className="dropdown-header">
+            <span className="dropdown-email">{user?.email || "کاربر"}</span>
+          </div>
+          <div className="dropdown-divider" />
+          <Link 
+            to="/profile" 
+            className="dropdown-item"
+            role="menuitem"
+            onClick={() => setIsOpen(false)}
+          >
+            <span className="dropdown-icon">👤</span>
+            پروفایل من
+          </Link>
+          <button 
+            className="dropdown-item logout-item"
+            role="menuitem"
+            onClick={() => {
+              setIsOpen(false);
+              onLogout();
+            }}
+          >
+            <span className="dropdown-icon">🚪</span>
+            خروج از حساب
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ========== Main Home Component ========== */
 export default function Home() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState(null);
   const [loadingItems, setLoadingItems] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
+  
+  // Auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState(null);
+
+  // Check authentication status on mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const authenticated = isAuthenticated();
+      setIsLoggedIn(authenticated);
+      if (authenticated) {
+        setUserData(getUserData());
+      }
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     fetchRecentItems()
@@ -119,6 +209,13 @@ export default function Home() {
       .then(setStats)
       .finally(() => setLoadingStats(false));
   }, []);
+
+  const handleLogout = () => {
+    clearAuth();
+    setIsLoggedIn(false);
+    setUserData(null);
+    navigate("/");
+  };
 
   return (
     <div className="home-container">
@@ -131,7 +228,15 @@ export default function Home() {
           </Link>
           <nav className="header-nav">
             <Link to="/map" className="nav-link">نقشه</Link>
-            <Link to="/login" className="nav-link nav-btn">ورود</Link>
+            
+            {isLoggedIn ? (
+              <UserMenu user={userData} onLogout={handleLogout} />
+            ) : (
+              <>
+                <Link to="/signup" className="nav-link">ثبت‌نام</Link>
+                <Link to="/login" className="nav-link nav-btn">ورود</Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -153,9 +258,16 @@ export default function Home() {
               <Link to="/map" className="btn btn-primary">
                 <span>🗺️</span> مشاهده نقشه
               </Link>
-              <Link to="/signup" className="btn btn-secondary">
-                <span>👤</span> ثبت‌نام
-              </Link>
+              {!isLoggedIn && (
+                <Link to="/signup" className="btn btn-secondary">
+                  <span>👤</span> ثبت‌نام
+                </Link>
+              )}
+              {isLoggedIn && (
+                <Link to="/items/new" className="btn btn-secondary">
+                  <span>📝</span> ثبت شیء جدید
+                </Link>
+              )}
             </div>
           </div>
         </section>
@@ -251,6 +363,7 @@ export default function Home() {
           </div>
           <nav className="footer-nav">
             <Link to="/map">نقشه</Link>
+            <Link to="/terms">قوانین</Link>
             <Link to="/about">درباره ما</Link>
             <Link to="/contact">تماس</Link>
           </nav>
@@ -260,4 +373,3 @@ export default function Home() {
     </div>
   );
 }
-

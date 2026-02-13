@@ -64,7 +64,7 @@
 /* Alert */
 .login-container .alert {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
   border-radius: 12px;
@@ -80,6 +80,25 @@
 
 .login-container .alert-icon {
   font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.login-container .alert-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-container .verify-link {
+  color: #667eea;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.login-container .verify-link:hover {
+  text-decoration: underline;
 }
 
 /* Form Group */
@@ -501,6 +520,10 @@
     background: rgba(220, 38, 38, 0.1);
     border-color: rgba(220, 38, 38, 0.3);
     color: #f87171;
+  }
+
+  .login-container .verify-link {
+    color: #818cf8;
   }
 }
 

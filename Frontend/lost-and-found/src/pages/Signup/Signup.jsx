@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { signupRequestOtp, signupVerifyOtp } from "../../services/api";
-import OtpInput from "../../components/OtpInput/OtpInput";
+import { registerRequest, resendRegistrationOtp, verifyRegistrationOtp } from "../../services/api";
+import OtpInput from "../../Components/OtpInput/OtpInput";
 import {
   validateUniversityEmail,
   validatePassword,
@@ -14,7 +14,7 @@ import {
 import "./Signup.css";
 
 const OTP_LENGTH = 6;
-const RESEND_COOLDOWN = 60; // seconds
+const RESEND_COOLDOWN = 120; // seconds (2 minutes - matches backend OTP expiry)
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -142,6 +142,7 @@ export default function Signup() {
   };
 
   // Step 1: Submit form and request OTP
+  // Backend expects: { email, name, password }
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     
@@ -161,11 +162,26 @@ export default function Signup() {
     
     try {
       const normalizedEmail = normalizeEmail(formData.email);
-      await signupRequestOtp({ email: normalizedEmail });
+      
+      // Send registration request with all user data
+      // Backend creates unverified user and sends OTP
+      await registerRequest({
+        email: normalizedEmail,
+        name: formData.fullName.trim(),
+        password: formData.password,
+      });
+      
       setStep("verify");
       setResendCooldown(RESEND_COOLDOWN);
     } catch (error) {
-      setSubmitError(error.message || "خطا در ارسال کد تأیید. لطفاً دوباره تلاش کنید.");
+      // Handle specific error cases
+      if (error.status === 429) {
+        setSubmitError("تعداد درخواست‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید.");
+      } else if (error.status === 400 && error.message?.includes("email")) {
+        setSubmitError("این ایمیل قبلاً ثبت شده است.");
+      } else {
+        setSubmitError(error.message || "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -178,18 +194,25 @@ export default function Signup() {
   };
 
   // Resend OTP
+  // Backend expects: { email }
   const handleResendOtp = async () => {
     if (resendCooldown > 0 || isResending) return;
     
     setIsResending(true);
+    setSubmitError("");
     
     try {
       const normalizedEmail = normalizeEmail(formData.email);
-      await signupRequestOtp({ email: normalizedEmail });
+      await resendRegistrationOtp({ email: normalizedEmail });
       setResendCooldown(RESEND_COOLDOWN);
-    } catch {
-      // Silently fail or show brief message
-      setResendCooldown(RESEND_COOLDOWN);
+    } catch (error) {
+      if (error.status === 429) {
+        setSubmitError("تعداد درخواست‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید.");
+        setResendCooldown(RESEND_COOLDOWN);
+      } else {
+        // Still start cooldown to prevent spam
+        setResendCooldown(RESEND_COOLDOWN);
+      }
     } finally {
       setIsResending(false);
     }
@@ -203,6 +226,8 @@ export default function Signup() {
   };
 
   // Step 2: Verify OTP and complete signup
+  // Backend expects: { email, otp }
+  // Note: Password was already sent in step 1
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
     
@@ -216,11 +241,12 @@ export default function Signup() {
     
     try {
       const normalizedEmail = normalizeEmail(formData.email);
-      await signupVerifyOtp({
+      
+      // Verify OTP - only email and otp needed
+      // User data was sent in the registration request
+      await verifyRegistrationOtp({
         email: normalizedEmail,
         otp: otp,
-        fullName: formData.fullName.trim(),
-        password: formData.password,
       });
       
       setSubmitSuccess(true);
@@ -228,7 +254,14 @@ export default function Signup() {
         navigate("/login");
       }, 2000);
     } catch (error) {
-      setSubmitError(error.message || "کد تأیید نامعتبر یا منقضی شده است.");
+      // Handle specific error cases
+      if (error.status === 429) {
+        setSubmitError("تعداد تلاش‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید.");
+      } else if (error.status === 400) {
+        setSubmitError("کد تأیید نامعتبر یا منقضی شده است. کد پس از ۲ دقیقه منقضی می‌شود.");
+      } else {
+        setSubmitError(error.message || "خطا در تأیید. لطفاً دوباره تلاش کنید.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -268,6 +301,7 @@ export default function Signup() {
             <div className="logo-icon">📧</div>
             <h1>تأیید ایمیل</h1>
             <p>کد تأیید ۶ رقمی به ایمیل زیر ارسال شد</p>
+            <p className="otp-expiry-note">کد پس از ۲ دقیقه منقضی می‌شود</p>
           </div>
 
           {/* Email display */}
@@ -305,7 +339,7 @@ export default function Signup() {
             <div className="resend-section">
               {resendCooldown > 0 ? (
                 <span className="resend-cooldown">
-                  ارسال مجدد کد ({resendCooldown} ثانیه)
+                  ارسال مجدد کد ({Math.floor(resendCooldown / 60)}:{String(resendCooldown % 60).padStart(2, '0')})
                 </span>
               ) : (
                 <button
@@ -572,9 +606,9 @@ export default function Signup() {
               />
               <span className="checkbox-custom" />
               <span>
-                <a href="/terms" target="_blank" rel="noopener noreferrer">
+                <Link to="/terms">
                   قوانین و مقررات
-                </a>{" "}
+                </Link>{" "}
                 را مطالعه کردم و می‌پذیرم
               </span>
             </label>

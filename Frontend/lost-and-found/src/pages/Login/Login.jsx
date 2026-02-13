@@ -25,6 +25,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [showVerifyLink, setShowVerifyLink] = useState(false);
 
   // Validation
   const validateField = (name, value) => {
@@ -53,6 +54,7 @@ export default function Login() {
     
     setFormData((prev) => ({ ...prev, [name]: newValue }));
     setSubmitError("");
+    setShowVerifyLink(false);
     
     // Real-time validation for touched fields
     if (touched[name]) {
@@ -89,34 +91,35 @@ export default function Login() {
     
     setIsSubmitting(true);
     setSubmitError("");
+    setShowVerifyLink(false);
     
     try {
       const credentials = {
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
       };
       
-      const response = await login(credentials);
-      
-      // Store auth token
-      if (response.token) {
-        if (formData.rememberMe) {
-          localStorage.setItem("authToken", response.token);
-        } else {
-          sessionStorage.setItem("authToken", response.token);
-        }
-      }
-      
-      // Store user data if provided
-      if (response.user) {
-        const storage = formData.rememberMe ? localStorage : sessionStorage;
-        storage.setItem("user", JSON.stringify(response.user));
-      }
+      await login(credentials, formData.rememberMe);
       
       // Navigate to main page
       navigate("/home");
     } catch (error) {
-      setSubmitError(error.message || "ایمیل یا رمز عبور اشتباه است.");
+      // Handle specific error cases
+      if (error.code === "no_active_account") {
+        // Check if it's specifically about verification
+        if (error.data?.detail?.toLowerCase().includes("not verified")) {
+          setSubmitError("حساب شما تأیید نشده است. لطفاً ابتدا ایمیل خود را تأیید کنید.");
+          setShowVerifyLink(true);
+        } else {
+          setSubmitError("ایمیل یا رمز عبور اشتباه است.");
+        }
+      } else if (error.status === 401) {
+        setSubmitError("ایمیل یا رمز عبور اشتباه است.");
+      } else if (error.status === 429) {
+        setSubmitError("تعداد تلاش‌ها بیش از حد مجاز است. لطفاً کمی صبر کنید.");
+      } else {
+        setSubmitError(error.message || "خطا در ورود. لطفاً دوباره تلاش کنید.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -139,7 +142,14 @@ export default function Login() {
         {submitError && (
           <div className="alert alert-error" role="alert">
             <span className="alert-icon">⚠</span>
-            {submitError}
+            <div className="alert-content">
+              <span>{submitError}</span>
+              {showVerifyLink && (
+                <Link to="/verify-email" className="verify-link">
+                  تأیید حساب کاربری
+                </Link>
+              )}
+            </div>
           </div>
         )}
 
@@ -254,4 +264,3 @@ export default function Login() {
     </div>
   );
 }
-
