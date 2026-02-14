@@ -14,14 +14,14 @@ import java.time.LocalDateTime;
 public class ProductResponseDto {
 
     private Long id;
-    private String productName;
+    private String itemName;
     private String description;
-    private TypeOfReport typeOfReport;
+    private TypeOfReport type;
     private Status status;
-    private LocalDateTime lostOrFoundTime;
-    private String deliveredTo;
-    private String userEmail;
-    private String userName;
-    private Double locationX;
-    private Double locationY;
+    private LocalDateTime reportedAt;
+    private LocalDateTime resolvedAt;
+    private String categoryName;
+    private ApplicantDto applicant;
+    private ApplicantDto resolver;
+    private LocationDto location;
 }

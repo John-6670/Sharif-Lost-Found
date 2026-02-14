@@ -2,14 +2,19 @@ package com.nexus.nexus.Service;
 
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
-import org.springframework.stereotype.Service;
+import com.nexus.nexus.Dto.ReportItemRequestDto;
 
-@Service
+import java.util.List;
+
 public interface ProductService {
+
+    List<ProductResponseDto> findAllProducts();
 
     ProductResponseDto addProduct(ProductRequestDto request, String authenticatedUserEmail);
 
     ProductResponseDto deleteProduct(Long productId, String authenticatedUserEmail);
 
     ProductResponseDto updateProduct(Long productId, ProductRequestDto request, String authenticatedUserEmail);
+
+    void reportItem(Long itemId, ReportItemRequestDto request, String authenticatedUserEmail);
 }

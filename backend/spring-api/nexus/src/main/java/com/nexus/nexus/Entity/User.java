@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,27 +23,36 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "USER")
+@Table(name = "users")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "full_name", nullable = false)
+    private String fullName;
+
+    @Column(nullable = false, unique = true)
     private String email;
 
-    private String name;
-
+    @Column(nullable = false)
     private String password;
 
-    private Boolean verified;
+    private String contact;
+
+    @Column(name = "registration_date", nullable = false)
+    private LocalDateTime registrationDate;
 
     @Column(name = "last_seen")
     private LocalDateTime lastSeen;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @OneToMany(mappedBy = "applicant")
+    private List<Item> applicantItems;
 
-    @OneToMany(mappedBy = "user")
-    private List<Product> products;
+    @OneToMany(mappedBy = "resolver")
+    private List<Item> resolvedItems;
+
+    @OneToOne(mappedBy = "owner")
+    private Otp otp;
 }
