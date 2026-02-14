@@ -54,10 +54,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ['profile_pic', 'phone_number', 'items_reported_found',
-                  'items_reported_missing', 'user_name', 'preferred_contact_method']
-
-        read_only_fields = ['items_reported_found', 'items_reported_missing']
+        fields = ['profile_pic', 'phone_number', 'social_media_links',
+                  'user_name', 'preferred_contact_method']
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
