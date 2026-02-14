@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 
-from .models import User
+from .models import User, UserProfile
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -49,19 +49,43 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+class UserProfileSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.name', required=False)
+
+    class Meta:
+        model = UserProfile
+        fields = ['profile_pic', 'phone_number', 'items_reported_found',
+                  'items_reported_missing', 'user_name', 'preferred_contact_method']
+
+        read_only_fields = ['items_reported_found', 'items_reported_missing']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        user = instance.user
+
+        # Update user fields
+        if 'name' in user_data:
+            user.name = user_data['name']
+            user.save()
+
+        # Update profile fields
+        return super().update(instance, validated_data)
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         # first, authenticate normally
         data = super().validate(attrs)
 
-        # replace `is_active` check with your `is_verified`
+        # replace `is_active` check with `is_verified`
         user = self.user
         if not getattr(user, "is_verified", False):
             raise AuthenticationFailed("Account is not verified.", "no_active_account")
 
         data["user_id"] = str(user.id)
         data["email"] = user.email
+        data["name"] = user.name
 
         return data
 
