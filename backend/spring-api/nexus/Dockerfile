@@ -1,7 +1,7 @@
 # --------------------------
 # Stage 1: Build
 # --------------------------
-FROM eclipse-temurin:17-jdk-alpine AS build
+FROM eclipse-temurin:21-jdk-alpine AS build
 
 # Set working directory
 WORKDIR /app
@@ -21,7 +21,7 @@ RUN mvn clean package -DskipTests
 # --------------------------
 # Stage 2: Runtime
 # --------------------------
-FROM eclipse-temurin:17-jdk-alpine
+FROM eclipse-temurin:21-jdk-alpine
 
 WORKDIR /app
 
