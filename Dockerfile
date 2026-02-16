@@ -1,20 +1,30 @@
-# Use official Java 17 JDK
-FROM eclipse-temurin:21-jdk-alpine
+# Use official Java 17 JDK image
+FROM eclipse-temurin:21-jdk-alpine AS build
 
-# Set working directory
+# Set working directory inside the container
 WORKDIR /app
 
-# Copy your Spring Boot module into container
+# Copy the Spring Boot module
 COPY backend/spring-api/nexus /app
 
-# If you have Maven Wrapper, use it; otherwise install Maven
-RUN apk add --no-cache maven
+# Install Maven (for Alpine Linux)
+RUN apk add --no-cache maven bash git
 
-# Build the app
+# Build the app, skip tests to speed up and avoid test failures
 RUN mvn clean package -DskipTests
 
-# Expose default Spring Boot port
+# --------------------------
+# Runtime stage
+# --------------------------
+FROM eclipse-temurin:21-jdk-alpine
+
+WORKDIR /app
+
+# Copy the built jar from the build stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Expose Spring Boot default port
 EXPOSE 8080
 
 # Start the app
-CMD ["java", "-jar", "target/nexus-0.0.1-SNAPSHOT.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]
