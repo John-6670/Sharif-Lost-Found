@@ -7,6 +7,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,6 +23,7 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
@@ -35,6 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String email = null;
         Long userId = null;
         String jwt = null;
+        String path = request.getRequestURI();
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
@@ -43,9 +47,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (email == null) {
                     userId = jwtUtil.extractUserId(jwt);
                 }
+                log.debug("JWT extracted on path {}: email={}, userId={}", path, email, userId);
             } catch (Exception e) {
-                // Invalid token, continue without authentication
+                log.warn("JWT parsing failed on path {}: {}", path, e.getMessage());
             }
+        } else {
+            log.debug("No Bearer token provided on path {}", path);
         }
 
         if ((email != null || userId != null) && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -67,6 +74,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+                log.info("JWT authentication success on path {} for user {}", path, user.getEmail());
+            } else if (userOptional.isEmpty()) {
+                log.warn("JWT claims resolved but no local user found on path {} (email={}, userId={})", path, email, userId);
+            } else {
+                log.warn("JWT rejected during validation on path {} (email={}, userId={})", path, email, userId);
             }
         }
 

@@ -2,8 +2,11 @@ package com.nexus.nexus.Security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +21,7 @@ import java.util.function.Function;
 
 @Component
 public class JwtUtil {
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
 
     @Value("${jwt.verifying-key:}")
     private String verifyingKeyPem;
@@ -45,8 +49,10 @@ public class JwtUtil {
             X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
             PublicKey parsedKey = KeyFactory.getInstance("RSA").generatePublic(spec);
             cachedVerifyingKey = parsedKey;
+            log.info("JWT verifying key loaded successfully");
             return parsedKey;
         } catch (Exception e) {
+            log.error("Failed to load JWT verifying key: {}", e.getMessage());
             throw new IllegalStateException("Invalid jwt verifying key configuration", e);
         }
     }
@@ -69,14 +75,17 @@ public class JwtUtil {
 
         String subject = claims.getSubject();
         if (subject != null && !subject.isBlank()) {
+            log.debug("JWT parsed: using subject as email");
             return subject;
         }
 
         String email = claims.get("email", String.class);
         if (email != null && !email.isBlank()) {
+            log.debug("JWT parsed: using email claim");
             return email;
         }
 
+        log.debug("JWT parsed but no subject/email claim found");
         return null;
     }
 
@@ -84,6 +93,7 @@ public class JwtUtil {
         Claims claims = extractAllClaims(token);
         Object userId = claims.get("user_id");
         if (userId == null) {
+            log.debug("JWT parsed but no user_id claim found");
             return null;
         }
 
@@ -92,8 +102,11 @@ public class JwtUtil {
         }
 
         try {
-            return Long.parseLong(String.valueOf(userId));
+            Long parsed = Long.parseLong(String.valueOf(userId));
+            log.debug("JWT parsed: using user_id claim {}", parsed);
+            return parsed;
         } catch (NumberFormatException e) {
+            log.warn("JWT user_id claim is not numeric: {}", userId);
             return null;
         }
     }
@@ -108,11 +121,18 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getVerifyingKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getVerifyingKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            log.debug("JWT signature verified successfully");
+            return claims;
+        } catch (JwtException e) {
+            log.warn("JWT parse/verify failed: {}", e.getMessage());
+            throw e;
+        }
     }
 
     private Boolean isTokenExpired(String token) {
@@ -120,15 +140,30 @@ public class JwtUtil {
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
-        final String email = extractEmail(token);
-        return (email != null && email.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        try {
+            final String email = extractEmail(token);
+            boolean valid = email != null && email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+            if (!valid) {
+                log.debug("JWT invalid for userDetails username={}", userDetails.getUsername());
+            }
+            return valid;
+        } catch (Exception e) {
+            log.warn("JWT validation failed for userDetails: {}", e.getMessage());
+            return false;
+        }
     }
 
     public Boolean validateToken(String token) {
         try {
-            extractAllClaims(token);
-            return !isTokenExpired(token);
+            boolean valid = !isTokenExpired(token);
+            if (valid) {
+                log.debug("JWT validated successfully");
+            } else {
+                log.debug("JWT rejected: expired");
+            }
+            return valid;
         } catch (Exception e) {
+            log.warn("JWT validation failed: {}", e.getMessage());
             return false;
         }
     }
