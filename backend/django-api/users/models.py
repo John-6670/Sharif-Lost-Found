@@ -15,7 +15,7 @@ class UserManager(BaseUserManager):
         user = self.model(
             email=email,
             name=name,
-            verified=verified,
+            is_verified=verified,
         )
         user.set_password(password)
         user.save(using=self._db)

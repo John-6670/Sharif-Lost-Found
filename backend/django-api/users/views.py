@@ -81,7 +81,7 @@ class RegisterVerifyView(APIView):
         if not user:
             return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user.verified = True
+        user.is_verified = True
         user.save()
         otp_obj.delete()
         return Response(UserPublicSerializer(user).data, status=status.HTTP_201_CREATED)
@@ -101,7 +101,7 @@ class ResendOTPView(APIView):
 
         email = serializer.validated_data['email']
         user = User.objects.filter(email=email).first()
-        if not user or user.verified:
+        if not user or user.is_verified:
             return Response({'error': 'User not found or already verified'}, status=status.HTTP_400_BAD_REQUEST)
 
         otp = generate_otp()

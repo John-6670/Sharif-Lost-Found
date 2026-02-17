@@ -43,7 +43,7 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(username=attrs['email'], password=attrs['password'])
         if not user:
             raise serializers.ValidationError('Invalid credentials')
-        if not user.verified:
+        if not user.is_verified:
             raise serializers.ValidationError('User not verified')
         attrs['user'] = user
         return attrs
