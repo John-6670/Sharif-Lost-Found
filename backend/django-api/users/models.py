@@ -81,6 +81,7 @@ class UserProfile(models.Model):
     preferred_contact_method = models.CharField(default='email', max_length=50,
                                         choices=[('email', 'Email'), ('phone', 'Phone'), ('social', 'Social Media')])
     social_media_links = models.JSONField(default=dict, blank=True)  # e.g. {"facebook": "url", "twitter": "url"}
+    department = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return f"Profile of {self.user.email}"
