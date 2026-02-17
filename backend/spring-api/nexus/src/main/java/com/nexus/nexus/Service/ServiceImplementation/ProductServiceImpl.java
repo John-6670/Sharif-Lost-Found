@@ -2,15 +2,12 @@ package com.nexus.nexus.Service.ServiceImplementation;
 
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
-import com.nexus.nexus.Dto.ReportItemRequestDto;
 import com.nexus.nexus.Entity.Category;
-import com.nexus.nexus.Entity.ItemReport;
 import com.nexus.nexus.Entity.MapTile;
 import com.nexus.nexus.Entity.Item;
 import com.nexus.nexus.Entity.User;
 import com.nexus.nexus.Mapper.ProductMapper;
 import com.nexus.nexus.Repository.CategoryRepository;
-import com.nexus.nexus.Repository.ItemReportRepository;
 import com.nexus.nexus.Repository.MapTileRepository;
 import com.nexus.nexus.Repository.ReportRepository;
 import com.nexus.nexus.Repository.UserRepository;
@@ -19,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,7 +24,6 @@ import java.util.Optional;
 public class ProductServiceImp implements ProductService {
 
     private final ReportRepository reportRepository;
-    private final ItemReportRepository itemReportRepository;
     private final CategoryRepository categoryRepository;
     private final MapTileRepository mapTileRepository;
     private final UserRepository userRepository;
@@ -173,7 +168,7 @@ public class ProductServiceImp implements ProductService {
 
     @Override
     @Transactional
-    public void reportItem(Long itemId, ReportItemRequestDto request, String authenticatedUserEmail) {
+    public void reportItem(Long itemId, String authenticatedUserEmail) {
         
         // Find the item
         Item item = reportRepository.findById(itemId)
@@ -183,24 +178,6 @@ public class ProductServiceImp implements ProductService {
         if (item.getIsRemoved()) {
             throw new IllegalArgumentException("Item has already been removed");
         }
-        
-        // Find the user
-        User reporter = userRepository.findByEmail(authenticatedUserEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        
-        // Check if user already reported this item
-        if (itemReportRepository.existsByItemIdAndReporterId(itemId, reporter.getId())) {
-            throw new IllegalArgumentException("You have already reported this item");
-        }
-        
-        // Create the report
-        ItemReport itemReport = ItemReport.builder()
-                .item(item)
-                .reporter(reporter)
-                .reason(request.getReason())
-                .reportedAt(LocalDateTime.now())
-                .build();
-        itemReportRepository.save(itemReport);
         
         // Increment counter
         item.setReportsCounter(item.getReportsCounter() + 1);

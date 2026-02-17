@@ -2,7 +2,6 @@ package com.nexus.nexus.Controller;
 
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
-import com.nexus.nexus.Dto.ReportItemRequestDto;
 import com.nexus.nexus.Models.ResponseModel;
 import com.nexus.nexus.Service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -85,13 +84,12 @@ public class ProductController {
 
     @PostMapping("/{productId}/report")
     public ResponseEntity<ResponseModel<Void>> reportItem(
-            @PathVariable Long productId,
-            @RequestBody ReportItemRequestDto request) {
+            @PathVariable Long productId) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String authenticatedUserEmail = authentication.getName();
 
-        productService.reportItem(productId, request, authenticatedUserEmail);
+        productService.reportItem(productId, authenticatedUserEmail);
         return ResponseEntity.ok(ResponseModel.<Void>builder()
                 .success(true)
                 .message("Item reported successfully")
