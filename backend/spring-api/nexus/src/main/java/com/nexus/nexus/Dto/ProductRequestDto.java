@@ -2,8 +2,10 @@ package com.nexus.nexus.Dto;
 
 import com.nexus.nexus.Enumaration.Status;
 import com.nexus.nexus.Enumaration.TypeOfReport;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
@@ -11,6 +13,8 @@ import java.time.LocalDateTime;
 @Setter
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProductRequestDto {
 
     private String itemName;
