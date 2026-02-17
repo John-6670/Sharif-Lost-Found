@@ -21,7 +21,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class ProductServiceImp implements ProductService {
+public class ProductServiceImpl implements ProductService {
 
     private final ReportRepository reportRepository;
     private final CategoryRepository categoryRepository;

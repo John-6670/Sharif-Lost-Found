@@ -3,8 +3,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework.permissions import IsAuthenticated
 
-from .models import RegistrationOTP, User
+from .models import RegistrationOTP, User, UserProfile
 from .serializers import (
     OTPRequestSerializer,
     OTPVerifySerializer,
@@ -12,7 +13,8 @@ from .serializers import (
     UserPublicSerializer,
     LoginSerializer,
     CustomTokenObtainPairSerializer,
-    PasswordResetSerializer
+    PasswordResetSerializer,
+    UserProfileSerializer
 )
 from .utils import generate_otp, send_otp
 from .throttles import OTPIPRateThrottle, OTPEmailRateThrottle, OTPVerifyRateThrottle
@@ -190,3 +192,20 @@ class PasswordResetConfirmView(APIView):
         otp_obj.delete()
 
         return Response({'message': 'Password has been reset successfully'}, status=status.HTTP_200_OK)
+
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        serializer = UserProfileSerializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

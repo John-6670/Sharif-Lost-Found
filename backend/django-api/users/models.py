@@ -69,3 +69,18 @@ class RegistrationOTP(models.Model):
     def is_expired(self):
         """Check if OTP is older than 2 minutes"""
         return timezone.now() > self.created_at + timezone.timedelta(minutes=2)
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    profile_pic = models.ImageField(upload_to='profile_pics', null=True, blank=True)
+    bio = models.TextField(null=True, blank=True)
+    phone_number = models.CharField(max_length=15, null=True, blank=True)
+    # items_reported_found = models.PositiveIntegerField(default=0)
+    # items_reported_missing = models.PositiveIntegerField(default=0)
+    preferred_contact_method = models.CharField(default='email', max_length=50,
+                                        choices=[('email', 'Email'), ('phone', 'Phone'), ('social', 'Social Media')])
+    social_media_links = models.JSONField(default=dict, blank=True)  # e.g. {"facebook": "url", "twitter": "url"}
+
+    def __str__(self):
+        return f"Profile of {self.user.email}"
