@@ -17,7 +17,7 @@ import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
-import java.util.function.Function;
+import java.util.Objects;
 
 @Component
 public class JwtUtil {
@@ -70,8 +70,10 @@ public class JwtUtil {
         return Files.readString(Path.of(verifyingKeyPath));
     }
 
-    public String extractEmail(String token) {
-        Claims claims = extractAllClaims(token);
+    public String extractEmail(Claims claims) {
+        if (claims == null) {
+            return null;
+        }
 
         String subject = claims.getSubject();
         if (subject != null && !subject.isBlank()) {
@@ -89,8 +91,46 @@ public class JwtUtil {
         return null;
     }
 
-    public Long extractUserId(String token) {
-        Claims claims = extractAllClaims(token);
+    public String extractName(Claims claims) {
+        if (claims == null) {
+            return null;
+        }
+        String name = claims.get("name", String.class);
+        return name != null && !name.isBlank() ? name : null;
+    }
+
+    public Boolean extractIsVerified(Claims claims) {
+        if (claims == null) {
+            return null;
+        }
+        Object value = claims.get("is_verified");
+        if (value instanceof Boolean boolValue) {
+            return boolValue;
+        }
+        if (value instanceof String stringValue) {
+            return Boolean.parseBoolean(stringValue);
+        }
+        return null;
+    }
+
+    public String extractTokenType(Claims claims) {
+        if (claims == null) {
+            return null;
+        }
+        return claims.get("token_type", String.class);
+    }
+
+    public String extractJti(Claims claims) {
+        if (claims == null) {
+            return null;
+        }
+        return claims.getId();
+    }
+
+    public Long extractUserId(Claims claims) {
+        if (claims == null) {
+            return null;
+        }
         Object userId = claims.get("user_id");
         if (userId == null) {
             log.debug("JWT parsed but no user_id claim found");
@@ -111,16 +151,14 @@ public class JwtUtil {
         }
     }
 
-    public Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+    public Date extractExpiration(Claims claims) {
+        if (claims == null) {
+            return null;
+        }
+        return claims.getExpiration();
     }
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
-    }
-
-    private Claims extractAllClaims(String token) {
+    public Claims parseClaims(String token) {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(getVerifyingKey())
@@ -135,14 +173,16 @@ public class JwtUtil {
         }
     }
 
-    private Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+    private Boolean isTokenExpired(Claims claims) {
+        Date expiration = extractExpiration(claims);
+        return expiration == null || expiration.before(new Date());
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         try {
-            final String email = extractEmail(token);
-            boolean valid = email != null && email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+            Claims claims = parseClaims(token);
+            final String email = extractEmail(claims);
+            boolean valid = email != null && email.equals(userDetails.getUsername()) && !isTokenExpired(claims);
             if (!valid) {
                 log.debug("JWT invalid for userDetails username={}", userDetails.getUsername());
             }
@@ -155,11 +195,13 @@ public class JwtUtil {
 
     public Boolean validateToken(String token) {
         try {
-            boolean valid = !isTokenExpired(token);
+            Claims claims = parseClaims(token);
+            String tokenType = extractTokenType(claims);
+            boolean valid = !isTokenExpired(claims) && Objects.equals("access", tokenType);
             if (valid) {
                 log.debug("JWT validated successfully");
             } else {
-                log.debug("JWT rejected: expired");
+                log.debug("JWT rejected: invalid token_type or expired");
             }
             return valid;
         } catch (Exception e) {

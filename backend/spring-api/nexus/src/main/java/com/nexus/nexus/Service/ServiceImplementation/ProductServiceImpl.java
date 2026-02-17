@@ -11,13 +11,16 @@ import com.nexus.nexus.Repository.CategoryRepository;
 import com.nexus.nexus.Repository.MapTileRepository;
 import com.nexus.nexus.Repository.ReportRepository;
 import com.nexus.nexus.Repository.UserRepository;
+import com.nexus.nexus.Security.JwtPrincipal;
 import com.nexus.nexus.Service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -38,11 +41,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponseDto addProduct(ProductRequestDto request, String authenticatedUserEmail) {
+    public ProductResponseDto addProduct(ProductRequestDto request, JwtPrincipal principal) {
 
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");
         }
+        validatePrincipal(principal);
 
         if (request.getItemName() == null || request.getItemName().isEmpty()) {
             throw new IllegalArgumentException("Item name is required");
@@ -64,12 +68,7 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("Category is required");
         }
 
-        // Use authenticated user email instead of request email
-        Optional<User> user = userRepository.findByEmail(authenticatedUserEmail);
-
-        if (user.isEmpty()) {
-            throw new IllegalArgumentException("Authenticated user not found");
-        }
+        User applicant = resolveApplicantFromPrincipal(principal);
 
         Category category = categoryRepository.findById(request.getCategoryName())
                 .orElseThrow(() -> new IllegalArgumentException("Category not found"));
@@ -87,7 +86,7 @@ public class ProductServiceImpl implements ProductService {
                 .status(request.getStatus())
                 .reportedAt(request.getReportedAt())
                 .category(category)
-                .applicant(user.get())
+                .applicant(applicant)
                 .location(location)
                 .build();
         item = reportRepository.save(item);
@@ -96,7 +95,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponseDto deleteProduct(Long productId, String authenticatedUserEmail) {
+    public ProductResponseDto deleteProduct(Long productId, JwtPrincipal principal) {
+        validatePrincipal(principal);
 
         Optional<Item> report = reportRepository.findById(productId);
         if (report.isEmpty()) {
@@ -105,7 +105,7 @@ public class ProductServiceImpl implements ProductService {
 
         // Verify that the product belongs to the authenticated user
         Item foundItem = report.get();
-        if (!foundItem.getApplicant().getEmail().equals(authenticatedUserEmail)) {
+        if (!foundItem.getApplicant().getEmail().equals(principal.email())) {
             throw new SecurityException("You are not authorized to delete this product");
         }
 
@@ -115,7 +115,8 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponseDto updateProduct(Long productId, ProductRequestDto request, String authenticatedUserEmail) {
+    public ProductResponseDto updateProduct(Long productId, ProductRequestDto request, JwtPrincipal principal) {
+        validatePrincipal(principal);
 
         Optional<Item> report = reportRepository.findById(productId);
 
@@ -125,7 +126,7 @@ public class ProductServiceImpl implements ProductService {
         Item foundItem = report.get();
 
         // Verify that the product belongs to the authenticated user
-        if (!foundItem.getApplicant().getEmail().equals(authenticatedUserEmail)) {
+        if (!foundItem.getApplicant().getEmail().equals(principal.email())) {
             throw new SecurityException("You are not authorized to update this product");
         }
 
@@ -168,7 +169,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public void reportItem(Long itemId, String authenticatedUserEmail) {
+    public void reportItem(Long itemId, JwtPrincipal principal) {
+        validatePrincipal(principal);
         
         // Find the item
         Item item = reportRepository.findById(itemId)
@@ -188,5 +190,32 @@ public class ProductServiceImpl implements ProductService {
         }
         
         reportRepository.save(item);
+    }
+
+    private void validatePrincipal(JwtPrincipal principal) {
+        if (principal == null || principal.email() == null || principal.email().isBlank()) {
+            throw new SecurityException("Missing required JWT claims");
+        }
+        if (!principal.verified()) {
+            throw new SecurityException("User is not verified");
+        }
+    }
+
+    private User resolveApplicantFromPrincipal(JwtPrincipal principal) {
+        return userRepository.findByEmail(principal.email())
+                .orElseGet(() -> {
+                    String fullName = principal.name() != null && !principal.name().isBlank()
+                            ? principal.name()
+                            : principal.email().split("@")[0];
+
+                    User newUser = User.builder()
+                            .fullName(fullName)
+                            .email(principal.email())
+                            .password(UUID.randomUUID().toString())
+                            .registrationDate(LocalDateTime.now())
+                            .lastSeen(LocalDateTime.now())
+                            .build();
+                    return userRepository.save(newUser);
+                });
     }
 }

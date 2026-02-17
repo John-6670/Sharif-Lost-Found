@@ -3,6 +3,7 @@ package com.nexus.nexus.Controller;
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
 import com.nexus.nexus.Models.ResponseModel;
+import com.nexus.nexus.Security.JwtPrincipal;
 import com.nexus.nexus.Service.ProductService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -42,10 +43,9 @@ public class ProductController {
     public ResponseEntity<ResponseModel<ProductResponseDto>> addProduct(
             @RequestBody ProductRequestDto request) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String authenticatedUserEmail = authentication.getName();
+        JwtPrincipal principal = getJwtPrincipal();
 
-        ProductResponseDto response = productService.addProduct(request, authenticatedUserEmail);
+        ProductResponseDto response = productService.addProduct(request, principal);
         return ResponseEntity.ok(ResponseModel.<ProductResponseDto>builder()
                 .success(true)
                 .message("Product added successfully")
@@ -57,10 +57,9 @@ public class ProductController {
     public ResponseEntity<ResponseModel<ProductResponseDto>> deleteProduct(
             @PathVariable Long productId) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String authenticatedUserEmail = authentication.getName();
+        JwtPrincipal principal = getJwtPrincipal();
 
-        ProductResponseDto response = productService.deleteProduct(productId, authenticatedUserEmail);
+        ProductResponseDto response = productService.deleteProduct(productId, principal);
         return ResponseEntity.ok(ResponseModel.<ProductResponseDto>builder()
                 .success(true)
                 .message("Product deleted successfully")
@@ -73,10 +72,9 @@ public class ProductController {
             @RequestBody ProductRequestDto request,
             @PathVariable Long productId) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String authenticatedUserEmail = authentication.getName();
+        JwtPrincipal principal = getJwtPrincipal();
 
-        ProductResponseDto response = productService.updateProduct(productId, request, authenticatedUserEmail);
+        ProductResponseDto response = productService.updateProduct(productId, request, principal);
         return ResponseEntity.ok(ResponseModel.<ProductResponseDto>builder()
                 .success(true)
                 .message("Product updated successfully")
@@ -88,13 +86,20 @@ public class ProductController {
     public ResponseEntity<ResponseModel<Void>> reportItem(
             @PathVariable Long productId) {
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String authenticatedUserEmail = authentication.getName();
+        JwtPrincipal principal = getJwtPrincipal();
 
-        productService.reportItem(productId, authenticatedUserEmail);
+        productService.reportItem(productId, principal);
         return ResponseEntity.ok(ResponseModel.<Void>builder()
                 .success(true)
                 .message("Item reported successfully")
                 .build());
+    }
+
+    private JwtPrincipal getJwtPrincipal() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof JwtPrincipal principal)) {
+            throw new SecurityException("Missing or invalid JWT principal");
+        }
+        return principal;
     }
 }
