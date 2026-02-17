@@ -27,6 +27,15 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Allow Swagger/OpenAPI endpoints without authentication.
+                        .requestMatchers(
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/swagger-ui",
+                                "/webjars/**"
+                        ).permitAll()
                         // Allow H2 console access (for development only)
                         .requestMatchers("/h2-console/**").permitAll()
                         // All API endpoints require authentication via JWT token
