@@ -2,7 +2,6 @@ package com.nexus.nexus.Service;
 
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
-import com.nexus.nexus.Dto.ReportItemRequestDto;
 
 import java.util.List;
 
@@ -16,5 +15,5 @@ public interface ProductService {
 
     ProductResponseDto updateProduct(Long productId, ProductRequestDto request, String authenticatedUserEmail);
 
-    void reportItem(Long itemId, ReportItemRequestDto request, String authenticatedUserEmail);
+    void reportItem(Long itemId, String authenticatedUserEmail);
 }
