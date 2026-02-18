@@ -40,7 +40,6 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // Allow Swagger/OpenAPI endpoints without authentication.
                         .requestMatchers(
                                 "/api/product",
                                 "/v3/api-docs",
@@ -50,7 +49,6 @@ public class SecurityConfig {
                                 "/swagger-ui",
                                 "/webjars/**"
                         ).permitAll()
-                        // All API endpoints require authentication via JWT token
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()
                 )
@@ -79,7 +77,7 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", config);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 

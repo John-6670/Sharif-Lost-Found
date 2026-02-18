@@ -38,7 +38,6 @@ public class JwtUtil {
 
         try {
             String pem = !verifyingKeyPem.isBlank() ? verifyingKeyPem : loadPemFromPath();
-            // Supports env var style PEM with escaped newlines.
             pem = pem.replace("\\n", "\n");
             String cleaned = pem
                     .replace("-----BEGIN PUBLIC KEY-----", "")
