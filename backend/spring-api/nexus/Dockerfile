@@ -4,8 +4,7 @@ FROM eclipse-temurin:21-jdk-alpine AS build
 # Set working directory inside the container
 WORKDIR /app
 
-# Copy the Spring Boot module
-COPY backend/spring-api/nexus /app
+COPY . /app
 
 # Install Maven (for Alpine Linux)
 RUN apk add --no-cache maven bash git
