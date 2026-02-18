@@ -71,6 +71,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        token['email'] = user.email
+        token['name'] = user.name
+        token['is_verified'] = user.is_verified
+        return token
 
     def validate(self, attrs):
         # first, authenticate normally
