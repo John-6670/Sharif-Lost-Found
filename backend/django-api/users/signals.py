@@ -24,6 +24,8 @@ def prepare_user_data(user_instance):
 def sync_user_register(user_instance):
     print("Syncing new user registration to external API:", user_instance.email)
     external_api_url = getattr(settings, 'EXTERNAL_USER_SYNC_API', None)
+    auth_header = getattr(settings, 'EXTERNAL_USER_SYNC_HEADER', 'X-Auth-Server-Token')
+    auth_secret = getattr(settings, 'EXTERNAL_USER_SYNC_SECRET', '')
     
     if not external_api_url:
         logger.warning("EXTERNAL_USER_SYNC_API not configured in settings. Skipping user registration sync.")
@@ -31,6 +33,10 @@ def sync_user_register(user_instance):
     
     user_data = prepare_user_data(user_instance)
     headers = {'Content-Type': 'application/json'}
+    if auth_secret:
+        headers[auth_header] = auth_secret
+    else:
+        logger.warning("EXTERNAL_USER_SYNC_SECRET not configured. Sending request without auth header.")
     
     try:
         response = requests.post(
@@ -56,6 +62,8 @@ def sync_user_register(user_instance):
 def sync_user_update(user_instance):
     print("Syncing user update to external API:", user_instance.email)
     external_api_url = getattr(settings, 'EXTERNAL_USER_SYNC_API', None)
+    auth_header = getattr(settings, 'EXTERNAL_USER_SYNC_HEADER', 'X-Auth-Server-Token')
+    auth_secret = getattr(settings, 'EXTERNAL_USER_SYNC_SECRET', '')
     
     if not external_api_url:
         logger.warning("EXTERNAL_USER_SYNC_API not configured in settings. Skipping user update sync.")
@@ -63,6 +71,10 @@ def sync_user_update(user_instance):
     
     user_data = prepare_user_data(user_instance)
     headers = {'Content-Type': 'application/json'}
+    if auth_secret:
+        headers[auth_header] = auth_secret
+    else:
+        logger.warning("EXTERNAL_USER_SYNC_SECRET not configured. Sending request without auth header.")
     
     try:
         response = requests.put(
