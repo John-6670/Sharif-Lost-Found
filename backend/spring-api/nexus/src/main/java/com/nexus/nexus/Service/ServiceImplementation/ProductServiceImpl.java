@@ -2,18 +2,16 @@ package com.nexus.nexus.Service.ServiceImplementation;
 
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
-import com.nexus.nexus.Dto.ReportItemRequestDto;
 import com.nexus.nexus.Entity.Category;
-import com.nexus.nexus.Entity.ItemReport;
 import com.nexus.nexus.Entity.MapTile;
 import com.nexus.nexus.Entity.Item;
 import com.nexus.nexus.Entity.User;
 import com.nexus.nexus.Mapper.ProductMapper;
 import com.nexus.nexus.Repository.CategoryRepository;
-import com.nexus.nexus.Repository.ItemReportRepository;
 import com.nexus.nexus.Repository.MapTileRepository;
 import com.nexus.nexus.Repository.ReportRepository;
 import com.nexus.nexus.Repository.UserRepository;
+import com.nexus.nexus.Security.JwtPrincipal;
 import com.nexus.nexus.Service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,13 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class ProductServiceImp implements ProductService {
+public class ProductServiceImpl implements ProductService {
 
     private final ReportRepository reportRepository;
-    private final ItemReportRepository itemReportRepository;
     private final CategoryRepository categoryRepository;
     private final MapTileRepository mapTileRepository;
     private final UserRepository userRepository;
@@ -43,11 +41,12 @@ public class ProductServiceImp implements ProductService {
     }
 
     @Override
-    public ProductResponseDto addProduct(ProductRequestDto request, String authenticatedUserEmail) {
+    public ProductResponseDto addProduct(ProductRequestDto request, JwtPrincipal principal) {
 
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");
         }
+        validatePrincipal(principal);
 
         if (request.getItemName() == null || request.getItemName().isEmpty()) {
             throw new IllegalArgumentException("Item name is required");
@@ -69,12 +68,7 @@ public class ProductServiceImp implements ProductService {
             throw new IllegalArgumentException("Category is required");
         }
 
-        // Use authenticated user email instead of request email
-        Optional<User> user = userRepository.findByEmail(authenticatedUserEmail);
-
-        if (user.isEmpty()) {
-            throw new IllegalArgumentException("Authenticated user not found");
-        }
+        User applicant = resolveApplicantFromPrincipal(principal);
 
         Category category = categoryRepository.findById(request.getCategoryName())
                 .orElseThrow(() -> new IllegalArgumentException("Category not found"));
@@ -92,7 +86,7 @@ public class ProductServiceImp implements ProductService {
                 .status(request.getStatus())
                 .reportedAt(request.getReportedAt())
                 .category(category)
-                .applicant(user.get())
+                .applicant(applicant)
                 .location(location)
                 .build();
         item = reportRepository.save(item);
@@ -101,7 +95,8 @@ public class ProductServiceImp implements ProductService {
     }
 
     @Override
-    public ProductResponseDto deleteProduct(Long productId, String authenticatedUserEmail) {
+    public ProductResponseDto deleteProduct(Long productId, JwtPrincipal principal) {
+        validatePrincipal(principal);
 
         Optional<Item> report = reportRepository.findById(productId);
         if (report.isEmpty()) {
@@ -110,7 +105,7 @@ public class ProductServiceImp implements ProductService {
 
         // Verify that the product belongs to the authenticated user
         Item foundItem = report.get();
-        if (!foundItem.getApplicant().getEmail().equals(authenticatedUserEmail)) {
+        if (!foundItem.getApplicant().getEmail().equals(principal.email())) {
             throw new SecurityException("You are not authorized to delete this product");
         }
 
@@ -120,7 +115,8 @@ public class ProductServiceImp implements ProductService {
     }
 
     @Override
-    public ProductResponseDto updateProduct(Long productId, ProductRequestDto request, String authenticatedUserEmail) {
+    public ProductResponseDto updateProduct(Long productId, ProductRequestDto request, JwtPrincipal principal) {
+        validatePrincipal(principal);
 
         Optional<Item> report = reportRepository.findById(productId);
 
@@ -130,7 +126,7 @@ public class ProductServiceImp implements ProductService {
         Item foundItem = report.get();
 
         // Verify that the product belongs to the authenticated user
-        if (!foundItem.getApplicant().getEmail().equals(authenticatedUserEmail)) {
+        if (!foundItem.getApplicant().getEmail().equals(principal.email())) {
             throw new SecurityException("You are not authorized to update this product");
         }
 
@@ -173,7 +169,8 @@ public class ProductServiceImp implements ProductService {
 
     @Override
     @Transactional
-    public void reportItem(Long itemId, ReportItemRequestDto request, String authenticatedUserEmail) {
+    public void reportItem(Long itemId, JwtPrincipal principal) {
+        validatePrincipal(principal);
         
         // Find the item
         Item item = reportRepository.findById(itemId)
@@ -184,24 +181,6 @@ public class ProductServiceImp implements ProductService {
             throw new IllegalArgumentException("Item has already been removed");
         }
         
-        // Find the user
-        User reporter = userRepository.findByEmail(authenticatedUserEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        
-        // Check if user already reported this item
-        if (itemReportRepository.existsByItemIdAndReporterId(itemId, reporter.getId())) {
-            throw new IllegalArgumentException("You have already reported this item");
-        }
-        
-        // Create the report
-        ItemReport itemReport = ItemReport.builder()
-                .item(item)
-                .reporter(reporter)
-                .reason(request.getReason())
-                .reportedAt(LocalDateTime.now())
-                .build();
-        itemReportRepository.save(itemReport);
-        
         // Increment counter
         item.setReportsCounter(item.getReportsCounter() + 1);
         
@@ -211,5 +190,32 @@ public class ProductServiceImp implements ProductService {
         }
         
         reportRepository.save(item);
+    }
+
+    private void validatePrincipal(JwtPrincipal principal) {
+        if (principal == null || principal.email() == null || principal.email().isBlank()) {
+            throw new SecurityException("Missing required JWT claims");
+        }
+        if (!principal.verified()) {
+            throw new SecurityException("User is not verified");
+        }
+    }
+
+    private User resolveApplicantFromPrincipal(JwtPrincipal principal) {
+        return userRepository.findByEmail(principal.email())
+                .orElseGet(() -> {
+                    String fullName = principal.name() != null && !principal.name().isBlank()
+                            ? principal.name()
+                            : principal.email().split("@")[0];
+
+                    User newUser = User.builder()
+                            .fullName(fullName)
+                            .email(principal.email())
+                            .password(UUID.randomUUID().toString())
+                            .registrationDate(LocalDateTime.now())
+                            .lastSeen(LocalDateTime.now())
+                            .build();
+                    return userRepository.save(newUser);
+                });
     }
 }

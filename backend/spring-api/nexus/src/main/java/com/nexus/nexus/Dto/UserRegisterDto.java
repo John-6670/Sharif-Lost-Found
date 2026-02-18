@@ -18,6 +18,7 @@ public class UserRegisterDto{
     private long id;
     private String email;
     private String name;
+    private String password;
     private boolean is_verified;
     private LocalDateTime last_seen;
     private LocalDateTime created_at;

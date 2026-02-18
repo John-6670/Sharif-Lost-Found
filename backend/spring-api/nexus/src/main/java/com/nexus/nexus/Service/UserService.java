@@ -1,6 +1,8 @@
 package com.nexus.nexus.Service;
 
-public interface UserService {
+import com.nexus.nexus.Dto.UserRegisterDto;
 
-    
-} 
+public interface UserService {
+    void registerUser(UserRegisterDto dto);
+    void updateUser(UserRegisterDto dto);
+}

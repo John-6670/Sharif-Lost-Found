@@ -1,18 +1,12 @@
 package com.nexus.nexus.Controller;
-import com.nexus.nexus.Dto.ProductRequestDto;
-import com.nexus.nexus.Dto.ProductResponseDto;
+
 import com.nexus.nexus.Dto.UserRegisterDto;
 import com.nexus.nexus.Models.ResponseModel;
-import com.nexus.nexus.Security.JwtPrincipal;
-import com.nexus.nexus.Service.ProductService;
+import com.nexus.nexus.Service.UserService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,24 +19,56 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class UserController{
 
+    private final UserService userService;
+
     @PostMapping()
     public ResponseEntity<ResponseModel<Void>> registerUser(
         @RequestBody UserRegisterDto dto
     ){
-        
-
-        return ResponseEntity.ok(ResponseModel.<Void>builder()
-                .success(true)
-                .message("user created in database successfully!")
-                .build());
+        try {
+            userService.registerUser(dto);
+            return ResponseEntity.ok(ResponseModel.<Void>builder()
+                    .success(true)
+                    .message("User created in database successfully!")
+                    .build());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseModel.<Void>builder()
+                            .success(false)
+                            .message(ex.getMessage())
+                            .build());
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ResponseModel.<Void>builder()
+                            .success(false)
+                            .message("Failed to create user")
+                            .build());
+        }
     }
 
     @PutMapping()
-    public ResponseEntity<ResponseModel<Void>> updateUser(){
-        return ResponseEntity.ok(ResponseModel.<Void>builder()
-                .success(true)
-                .message("user updated in database successfully!")
-                .build());
+    public ResponseEntity<ResponseModel<Void>> updateUser(
+            @RequestBody UserRegisterDto dto
+    ){
+        try {
+            userService.updateUser(dto);
+            return ResponseEntity.ok(ResponseModel.<Void>builder()
+                    .success(true)
+                    .message("User updated in database successfully!")
+                    .build());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ResponseModel.<Void>builder()
+                            .success(false)
+                            .message(ex.getMessage())
+                            .build());
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ResponseModel.<Void>builder()
+                            .success(false)
+                            .message("Failed to update user")
+                            .build());
+        }
     }
 
 }
