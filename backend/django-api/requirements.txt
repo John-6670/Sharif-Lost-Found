@@ -10,3 +10,5 @@ drf_spectacular~=0.29.0
 pillow
 psycopg2
 psycopg2-binary
+django-cors-headers
+requests
