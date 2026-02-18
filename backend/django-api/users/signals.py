@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 def prepare_user_data(user_instance):
+    print("Preparing user data for synchronization:", user_instance.email)
+
     return {
         'id': user_instance.id,
         'email': user_instance.email,
@@ -20,6 +22,7 @@ def prepare_user_data(user_instance):
 
 
 def sync_user_register(user_instance):
+    print("Syncing new user registration to external API:", user_instance.email)
     external_api_url = getattr(settings, 'EXTERNAL_USER_SYNC_API', None)
     
     if not external_api_url:
@@ -51,6 +54,7 @@ def sync_user_register(user_instance):
 
 
 def sync_user_update(user_instance):
+    print("Syncing user update to external API:", user_instance.email)
     external_api_url = getattr(settings, 'EXTERNAL_USER_SYNC_API', None)
     
     if not external_api_url:

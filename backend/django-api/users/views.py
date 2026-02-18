@@ -203,6 +203,7 @@ class UserProfileView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
+        print('hello')
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
         serializer = UserProfileSerializer(profile, data=request.data, partial=True)
         if serializer.is_valid():
