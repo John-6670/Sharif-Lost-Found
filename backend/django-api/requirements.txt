@@ -7,3 +7,8 @@ drf-yasg~=1.21.11
 PyJWT~=2.10.1
 argon2-cffi~=25.1.0
 drf_spectacular~=0.29.0
+pillow
+psycopg2
+psycopg2-binary
+django-cors-headers
+requests
