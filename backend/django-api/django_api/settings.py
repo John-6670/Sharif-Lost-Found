@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'corsheaders',
     # Local apps
     'users.apps.UsersConfig',
+    'items.apps.ItemsConfig',
 ]
 
 MIDDLEWARE = [
@@ -165,7 +166,8 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EXTERNAL_USER_SYNC_API = os.getenv('EXTERNAL_USER_SYNC_API')
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = [os.getenv('FRONT_DOMAIN'), os.getenv('BACK_DOMAIN')]
+# CORS_ALLOWED_ORIGINS = [os.getenv('FRONT_DOMAIN'), os.getenv('BACK_DOMAIN')]
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 MEDIA_URL = '/media/'
