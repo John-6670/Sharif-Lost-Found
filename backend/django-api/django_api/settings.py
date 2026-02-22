@@ -167,3 +167,6 @@ EXTERNAL_USER_SYNC_API = os.getenv('EXTERNAL_USER_SYNC_API')
 # CORS Settings
 CORS_ALLOWED_ORIGINS = [os.getenv('FRONT_DOMAIN'), os.getenv('BACK_DOMAIN')]
 CORS_ALLOW_CREDENTIALS = True
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

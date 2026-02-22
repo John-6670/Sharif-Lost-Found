@@ -14,7 +14,9 @@ from .serializers import (
     LoginSerializer,
     CustomTokenObtainPairSerializer,
     PasswordResetSerializer,
-    UserProfileSerializer
+    UserProfileSerializer,
+    PublicUserProfileSerializer,
+    EmailChangeSerializer
 )
 from .utils import generate_otp, send_otp
 from .throttles import OTPIPRateThrottle, OTPEmailRateThrottle, OTPVerifyRateThrottle
@@ -210,3 +212,29 @@ class UserProfileView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PublicUserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        serializer = PublicUserProfileSerializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class EmailChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        serializer = EmailChangeSerializer(data=request.data, context={'user': request.user})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.email = serializer.validated_data['new_email']
+        request.user.save()
+        return Response({'message': 'Email updated successfully'}, status=status.HTTP_200_OK)
