@@ -1,35 +1,29 @@
-# --------------------------
-# Stage 1: Build
-# --------------------------
+# Use official Java 17 JDK image
 FROM eclipse-temurin:21-jdk-alpine AS build
 
-# Set working directory
+# Set working directory inside the container
 WORKDIR /app
 
-# Copy only the pom.xml first (for caching dependencies)
-COPY pom.xml .
+COPY . /app
 
-# If you have Maven Wrapper, use it; else install Maven
+# Install Maven (for Alpine Linux)
 RUN apk add --no-cache maven bash git
 
-# Copy the full source code
-COPY src ./src
-
-# Build the Spring Boot app, skip tests to speed up
+# Build the app, skip tests to speed up and avoid test failures
 RUN mvn clean package -DskipTests
 
 # --------------------------
-# Stage 2: Runtime
+# Runtime stage
 # --------------------------
 FROM eclipse-temurin:21-jdk-alpine
 
 WORKDIR /app
 
-# Copy the built jar from build stage
+# Copy the built jar from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
 # Expose Spring Boot default port
 EXPOSE 8080
 
-# Run the app
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Start the app
+ENTRYPOINT ["java","-jar","app.jar"]

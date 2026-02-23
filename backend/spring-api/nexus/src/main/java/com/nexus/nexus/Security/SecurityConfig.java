@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final AuthServerHeaderFilter authServerHeaderFilter;
 
     @Value("${security.cors.allowed-origins:http://localhost:3000,https://sharif-lost-found-production.up.railway.app,https://mohammad6987.github.io}")
     private String allowedOrigins;
@@ -40,7 +41,6 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        // Allow Swagger/OpenAPI endpoints without authentication.
                         .requestMatchers(
                                 "/api/product",
                                 "/v3/api-docs",
@@ -50,7 +50,6 @@ public class SecurityConfig {
                                 "/swagger-ui",
                                 "/webjars/**"
                         ).permitAll()
-                        // All API endpoints require authentication via JWT token
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()
                 )
@@ -60,6 +59,7 @@ public class SecurityConfig {
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
                 )
+                .addFilterBefore(authServerHeaderFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -73,13 +73,13 @@ public class SecurityConfig {
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
 
-        config.setAllowedOrigins(origins);
+        config.setAllowedOrigins(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Auth-Server-Token"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", config);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 

@@ -1,15 +1,10 @@
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 
-from .views import (
-    RegisterRequestView,
-    RegisterVerifyView,
-    ResendOTPView,
-    LoginView,
-    CustomTokenObtainPairView,
-    CustomTokenRefreshView,
-    PasswordResetRequestView,
-    PasswordResetConfirmView,
-    UserProfileView,
+from .views import (RegisterRequestView, RegisterVerifyView, ResendOTPView,
+    LoginView, CustomTokenObtainPairView, CustomTokenRefreshView, PasswordResetRequestView,
+    PasswordResetConfirmView, UserProfileView, PublicUserProfileView, EmailChangeView,
 )
 
 
@@ -22,4 +17,8 @@ urlpatterns = [
     path('password-reset/request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('profile/', UserProfileView.as_view(), name='user_profile'),
+    path('profile/public/<int:user_id>/', PublicUserProfileView.as_view(), name='public_user_profile'),
+    path('profile/email/', EmailChangeView.as_view(), name='email_change'),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
