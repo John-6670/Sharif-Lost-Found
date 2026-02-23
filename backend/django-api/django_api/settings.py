@@ -85,6 +85,13 @@ DATABASES = {
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -131,6 +138,19 @@ STATIC_URL = 'static/'
 AUTH_USER_MODEL = 'users.User'
 
 # DRF Settings
+# REST_FRAMEWORK = {
+#     'DEFAULT_THROTTLE_RATES': {
+#         'otp_ip': '2000/m',
+#         'otp_email': '24000/h',
+#         'otp_verify': '30000/h',
+#     },
+#     'DEFAULT_PERMISSION_CLASSES': (
+#         'rest_framework.permissions.AllowAny',
+#     ),
+#     "DEFAULT_AUTHENTICATION_CLASSES": (
+#         "rest_framework_simplejwt.authentication.JWTAuthentication",
+#     ),
+# }
 REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'otp_ip': '2/m',
