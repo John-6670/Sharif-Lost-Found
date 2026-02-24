@@ -7,7 +7,7 @@ from django.contrib.auth.hashers import make_password, check_password
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, name, password=None, verified=False):
+    def create_user(self, email, name, password=None, is_verified=False):
         if not email:
             raise ValueError('Users must have an email address')
 
@@ -15,14 +15,14 @@ class UserManager(BaseUserManager):
         user = self.model(
             email=email,
             name=name,
-            is_verified=verified,
+            is_verified=is_verified,
         )
         user.set_password(password)
         user.save(using=self._db)
         return user
 
     def create_superuser(self, email, name, password=None):
-        user = self.create_user(email, name, password, verified=True)
+        user = self.create_user(email, name, password, is_verified=True)
         user.is_superuser = True
         user.save(using=self._db)
         return user
@@ -50,7 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     @property
     def is_staff(self):
-        return self.verified
+        return self.is_verified
 
 
 class RegistrationOTP(models.Model):
