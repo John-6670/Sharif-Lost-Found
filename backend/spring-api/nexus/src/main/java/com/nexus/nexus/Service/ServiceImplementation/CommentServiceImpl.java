@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,12 +35,9 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional(readOnly = true)
     public List<CommentResponseDto> getCommentsForItem(Long itemId) {
-        // Verify item exists and is not removed
-        Item item = reportRepository.findById(itemId)
+        // Verify item exists
+        reportRepository.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Item not found"));
-        if (item.getIsRemoved()) {
-            throw new IllegalArgumentException("Item has been removed");
-        }
 
         // Single query — fetch all comments for this item ordered by creation time
         List<Comment> all = commentRepository.findByItemIdOrderByCreatedAtAsc(itemId);
@@ -82,9 +80,6 @@ public class CommentServiceImpl implements CommentService {
 
         Item item = reportRepository.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Item not found"));
-        if (item.getIsRemoved()) {
-            throw new IllegalArgumentException("Cannot comment on a removed item");
-        }
 
         User author = resolveAuthor(principal);
 
@@ -132,8 +127,10 @@ public class CommentServiceImpl implements CommentService {
                             .fullName(fullName)
                             .email(principal.email())
                             .password(UUID.randomUUID().toString())
-                            .registrationDate(LocalDateTime.now())
-                            .lastSeen(LocalDateTime.now())
+                            .registrationDate(OffsetDateTime.now())
+                            .lastSeen(OffsetDateTime.now())
+                            .isVerified(true)
+                            .isSuperuser(false)
                             .build());
                 });
     }

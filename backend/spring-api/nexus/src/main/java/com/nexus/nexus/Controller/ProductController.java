@@ -2,7 +2,6 @@ package com.nexus.nexus.Controller;
 
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
-import com.nexus.nexus.Models.ResponseModel;
 import com.nexus.nexus.Security.JwtPrincipal;
 import com.nexus.nexus.Service.ProductService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -31,13 +30,9 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public ResponseEntity<ResponseModel<List<ProductResponseDto>>> getAllProducts() {
+    public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
         List<ProductResponseDto> response = productService.findAllProducts();
-        return ResponseEntity.ok(ResponseModel.<List<ProductResponseDto>>builder()
-                .success(true)
-                .message("Products fetched successfully")
-                .data(response)
-                .build());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/search")

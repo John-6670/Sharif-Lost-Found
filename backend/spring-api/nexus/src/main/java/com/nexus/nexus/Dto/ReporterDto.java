@@ -1,10 +1,8 @@
 package com.nexus.nexus.Dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
@@ -12,20 +10,15 @@ import java.time.OffsetDateTime;
 @Setter
 @Getter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class UserRegisterDto{
-    private long id;
+public class ReporterDto {
+
+    private Long id;
     private String email;
     private String name;
-    private String password;
-
-    @JsonProperty("is_verified")
-    private boolean isVerified;
-
-    @JsonProperty("last_seen")
-    private OffsetDateTime lastSeen;
 
     @JsonProperty("created_at")
     private OffsetDateTime createdAt;
+
+    @JsonProperty("is_verified")
+    private Boolean isVerified;
 }

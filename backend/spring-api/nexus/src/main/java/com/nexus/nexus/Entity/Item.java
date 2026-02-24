@@ -12,6 +12,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +21,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 @Entity
 @Setter
@@ -27,16 +30,17 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "report")
+@Table(name = "items_item", schema = "auth")
 public class Item {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "item_name", nullable = false)
-    private String itemName;
+    @Column(name = "name", nullable = false)
+    private String name;
 
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -47,37 +51,44 @@ public class Item {
     @Column(nullable = false)
     private Status status;
 
-    @Column(name = "reported_at", nullable = false)
-    private LocalDateTime reportedAt;
+    @Column(name = "reported_counts", nullable = false)
+    @Builder.Default
+    private Integer reportedCounts = 0;
 
-    @Column(name = "resolved_at")
-    private LocalDateTime resolvedAt;
+    @Column(name = "latitude", precision = 9, scale = 6, nullable = false)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 9, scale = 6, nullable = false)
+    private BigDecimal longitude;
+
+    @Column(name = "image", columnDefinition = "TEXT")
+    private String image;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "category", nullable = false)
+    @JoinColumn(name = "reporter_id", nullable = false)
+    private User reporter;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "applicant", nullable = false)
-    private User applicant;
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "resolver")
-    private User resolver;
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "location", nullable = false)
-    private MapTile location;
-    
-    @Column(name = "reports_counter", nullable = false)
-    @Builder.Default
-    private Integer reportsCounter = 0;
+    @PrePersist
+    void onCreate() {
+        OffsetDateTime now = OffsetDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
+    }
 
-    @Column(name = "is_removed", nullable = false)
-    @Builder.Default
-    private Boolean isRemoved = false;
-
-    /** Raw image bytes stored as binary (PostgreSQL bytea). Frontend sends/receives Base64. */
-    @Column(name = "image", columnDefinition = "bytea")
-    private byte[] image;
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = OffsetDateTime.now();
+    }
 }
