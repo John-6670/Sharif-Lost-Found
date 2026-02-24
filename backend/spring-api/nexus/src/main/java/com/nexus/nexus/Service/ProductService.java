@@ -10,6 +10,8 @@ public interface ProductService {
 
     List<ProductResponseDto> findAllProducts();
 
+    ProductResponseDto getProductById(Long productId);
+
     ProductResponseDto addProduct(ProductRequestDto request, JwtPrincipal principal);
 
     ProductResponseDto deleteProduct(Long productId, JwtPrincipal principal);

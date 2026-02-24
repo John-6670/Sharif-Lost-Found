@@ -53,6 +53,9 @@ public class SecurityConfig {
                                 "/h2-console/**"  // dev only – H2 browser console
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/items",
+                                "/api/items/*",
+                                "/api/items/*/comments",
                                 "/api/product",
                                 "/api/product/search",
                                 "/api/product/*/comments").permitAll()

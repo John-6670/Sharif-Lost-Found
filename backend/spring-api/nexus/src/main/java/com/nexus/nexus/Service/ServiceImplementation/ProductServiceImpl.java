@@ -36,6 +36,13 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public ProductResponseDto getProductById(Long productId) {
+        Item item = reportRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        return productMapper.toDto(item);
+    }
+
+    @Override
     public List<ProductResponseDto> searchProducts(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return findAllProducts();
