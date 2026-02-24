@@ -64,6 +64,10 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("Type of report is required");
         }
 
+        if (request.getStatus() == null) {
+            throw new IllegalArgumentException("Status is required");
+        }
+
         if (request.getCategoryName() == null || request.getCategoryName().isEmpty()) {
             throw new IllegalArgumentException("Category is required");
         }
@@ -109,7 +113,9 @@ public class ProductServiceImpl implements ProductService {
             throw new SecurityException("You are not authorized to delete this product");
         }
 
-        reportRepository.deleteById(productId);
+        // Soft-delete for consistency with the abuse-report removal mechanism
+        foundItem.setIsRemoved(true);
+        reportRepository.save(foundItem);
 
         return productMapper.toDto(foundItem);
     }
@@ -124,6 +130,10 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("Product not found");
         }
         Item foundItem = report.get();
+
+        if (foundItem.getIsRemoved()) {
+            throw new IllegalArgumentException("Product has been removed and cannot be updated");
+        }
 
         // Verify that the product belongs to the authenticated user
         if (!foundItem.getApplicant().getEmail().equals(principal.email())) {
