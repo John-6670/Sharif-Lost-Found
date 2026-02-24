@@ -26,6 +26,7 @@ import java.time.OffsetDateTime;
 @AllArgsConstructor
 @Table(
         name = "comment_report",
+        schema = "auth",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_comment_report_comment_reporter", columnNames = {"comment_id", "reporter_id"})
         }

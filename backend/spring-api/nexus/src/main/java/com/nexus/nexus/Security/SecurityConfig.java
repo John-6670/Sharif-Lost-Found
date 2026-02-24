@@ -33,7 +33,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthServerHeaderFilter authServerHeaderFilter;
 
-    @Value("${security.cors.allowed-origins:http://localhost:3000,https://sharif-lost-found-production.up.railway.app,https://mohammad6987.github.io}")
+    @Value("${security.cors.allowed-origins:http://localhost:5173,https://sharif-lost-found-production.up.railway.app,https://mohammad6987.github.io}")
     private String allowedOrigins;
 
     @Bean
@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
