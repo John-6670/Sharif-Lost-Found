@@ -25,6 +25,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # Must be first for channels
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -35,6 +36,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'corsheaders',
+    'channels',
     # Local apps
     'users.apps.UsersConfig',
     'chats.apps.ChatsConfig',
@@ -69,6 +71,32 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'django_api.wsgi.application'
+ASGI_APPLICATION = 'django_api.asgi.application'
+
+# Channel Layers Configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [{
+                # OR use this format:
+                "host": os.getenv('REDIS_HOST', 'localhost'),
+                "port": os.getenv('REDIS_PORT', 6379),
+                "username": os.getenv('REDIS_USERNAME', 'default'),
+                "password": os.getenv('REDIS_PASS'),
+                "db": 0,
+            }],
+            "capacity": 1500,
+            "expiry": 10
+        },
+    },
+}
+
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels.layers.InMemoryChannelLayer"
+#     }
+# }
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -83,6 +111,27 @@ DATABASES = {
         'PORT': os.getenv('DATABASE_PORT'),
         'OPTIONS': json.loads(os.getenv('DATABASE_OPTIONS', '{}'))
     }
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'chats': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
 }
 
 # DATABASES = {
@@ -186,8 +235,9 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EXTERNAL_USER_SYNC_API = os.getenv('EXTERNAL_USER_SYNC_API')
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = [os.getenv('FRONT_DOMAIN'), os.getenv('BACK_DOMAIN')]
+# CORS_ALLOWED_ORIGINS = [os.getenv('FRONT_DOMAIN'), os.getenv('BACK_DOMAIN')]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
