@@ -17,12 +17,12 @@ public interface ReportRepository extends JpaRepository<Item, Long> {
 
     @Query("""
             SELECT i FROM Item i
-            WHERE (:minLat IS NULL OR i.latitude BETWEEN :minLat AND :maxLat)
-              AND (:minLon IS NULL OR i.longitude BETWEEN :minLon AND :maxLon)
-              AND (:name IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%', :name, '%')))
-              AND (:type IS NULL OR i.type = :type)
-              AND (:from IS NULL OR i.createdAt >= :from)
-              AND (:to IS NULL OR i.createdAt <= :to)
+            WHERE i.latitude BETWEEN COALESCE(:minLat, i.latitude) AND COALESCE(:maxLat, i.latitude)
+              AND i.longitude BETWEEN COALESCE(:minLon, i.longitude) AND COALESCE(:maxLon, i.longitude)
+              AND (COALESCE(:name, '') = '' OR LOWER(i.name) LIKE :name)
+              AND i.type = COALESCE(:type, i.type)
+              AND i.createdAt >= COALESCE(:from, i.createdAt)
+              AND i.createdAt <= COALESCE(:to, i.createdAt)
             """)
     List<Item> searchByLocationAndFilters(
             @Param("minLat") java.math.BigDecimal minLat,

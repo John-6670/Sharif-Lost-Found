@@ -84,7 +84,9 @@ public class ProductServiceImpl implements ProductService {
             maxLon = java.math.BigDecimal.valueOf(centerLon + lonDelta);
         }
 
-        String safeName = (name == null || name.isBlank()) ? null : name.trim();
+        String safeName = (name == null || name.isBlank())
+                ? null
+                : "%" + name.trim().toLowerCase() + "%";
 
         List<Item> items = reportRepository.searchByLocationAndFilters(
                 minLat, maxLat, minLon, maxLon, safeName, type, from, to
