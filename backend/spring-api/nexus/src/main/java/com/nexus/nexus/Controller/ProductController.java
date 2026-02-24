@@ -60,11 +60,19 @@ public class ProductController {
 
     @GetMapping("/search/location")
     public ResponseEntity<ResponseModel<List<ProductResponseDto>>> searchByLocation(
-            @RequestParam double lat,
-            @RequestParam double lon,
-            @RequestParam double radiusKm) {
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lon,
+            @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) com.nexus.nexus.Enumaration.TypeOfReport type,
+            @RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
+            java.time.OffsetDateTime from,
+            @RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
+            java.time.OffsetDateTime to) {
 
-        List<ProductResponseDto> response = productService.searchByLocation(lat, lon, radiusKm);
+        List<ProductResponseDto> response = productService.searchByLocation(lat, lon, radiusKm, name, type, from, to);
         String message = response.isEmpty()
                 ? "No items found in the specified area"
                 : "Location search results fetched successfully";

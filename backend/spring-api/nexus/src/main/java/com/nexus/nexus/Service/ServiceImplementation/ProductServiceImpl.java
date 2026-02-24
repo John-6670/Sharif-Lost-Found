@@ -57,21 +57,37 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductResponseDto> searchByLocation(double centerLat, double centerLon, double radiusKm) {
-        if (radiusKm <= 0) {
-            throw new IllegalArgumentException("Radius must be greater than 0");
+    public List<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
+                                                     String name, com.nexus.nexus.Enumaration.TypeOfReport type,
+                                                     java.time.OffsetDateTime from, java.time.OffsetDateTime to) {
+        boolean anyLocationProvided = centerLat != null || centerLon != null || radiusKm != null;
+        boolean allLocationProvided = centerLat != null && centerLon != null && radiusKm != null;
+        if (anyLocationProvided && !allLocationProvided) {
+            throw new IllegalArgumentException("lat, lon, and radiusKm must be provided together");
         }
 
-        double latDelta = radiusKm / 111.0; // ~111 km per degree latitude
-        double lonDelta = radiusKm / (111.0 * Math.cos(Math.toRadians(centerLat)));
+        java.math.BigDecimal minLat = null;
+        java.math.BigDecimal maxLat = null;
+        java.math.BigDecimal minLon = null;
+        java.math.BigDecimal maxLon = null;
 
-        java.math.BigDecimal minLat = java.math.BigDecimal.valueOf(centerLat - latDelta);
-        java.math.BigDecimal maxLat = java.math.BigDecimal.valueOf(centerLat + latDelta);
-        java.math.BigDecimal minLon = java.math.BigDecimal.valueOf(centerLon - lonDelta);
-        java.math.BigDecimal maxLon = java.math.BigDecimal.valueOf(centerLon + lonDelta);
+        if (allLocationProvided) {
+            if (radiusKm <= 0) {
+                throw new IllegalArgumentException("Radius must be greater than 0");
+            }
+            double latDelta = radiusKm / 111.0; // ~111 km per degree latitude
+            double lonDelta = radiusKm / (111.0 * Math.cos(Math.toRadians(centerLat)));
 
-        List<Item> items = reportRepository.findByLatitudeBetweenAndLongitudeBetween(
-                minLat, maxLat, minLon, maxLon
+            minLat = java.math.BigDecimal.valueOf(centerLat - latDelta);
+            maxLat = java.math.BigDecimal.valueOf(centerLat + latDelta);
+            minLon = java.math.BigDecimal.valueOf(centerLon - lonDelta);
+            maxLon = java.math.BigDecimal.valueOf(centerLon + lonDelta);
+        }
+
+        String safeName = (name == null || name.isBlank()) ? null : name.trim();
+
+        List<Item> items = reportRepository.searchByLocationAndFilters(
+                minLat, maxLat, minLon, maxLon, safeName, type, from, to
         );
         return productMapper.toDtoList(items);
     }

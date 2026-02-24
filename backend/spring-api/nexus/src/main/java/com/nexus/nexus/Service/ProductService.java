@@ -22,5 +22,7 @@ public interface ProductService {
 
     List<ProductResponseDto> searchProducts(String keyword);
 
-    List<ProductResponseDto> searchByLocation(double centerLat, double centerLon, double radiusKm);
+    List<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
+                                              String name, com.nexus.nexus.Enumaration.TypeOfReport type,
+                                              java.time.OffsetDateTime from, java.time.OffsetDateTime to);
 }
