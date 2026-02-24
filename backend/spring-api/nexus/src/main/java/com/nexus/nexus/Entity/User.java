@@ -5,8 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,8 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import java.time.OffsetDateTime;
 
 @Entity
 @Setter
@@ -23,36 +20,36 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "users")
+@Table(name = "users_user", schema = "auth")
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "full_name", nullable = false)
+    @Column(name = "name", nullable = false)
     private String fullName;
 
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 128)
     private String password;
 
-    private String contact;
+    @Column(name = "is_superuser", nullable = false)
+    @Builder.Default
+    private Boolean isSuperuser = false;
 
-    @Column(name = "registration_date", nullable = false)
-    private LocalDateTime registrationDate;
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime registrationDate;
+
+    @Column(name = "last_login")
+    private OffsetDateTime lastLogin;
 
     @Column(name = "last_seen")
-    private LocalDateTime lastSeen;
+    private OffsetDateTime lastSeen;
 
-    @OneToMany(mappedBy = "applicant")
-    private List<Item> applicantItems;
-
-    @OneToMany(mappedBy = "resolver")
-    private List<Item> resolvedItems;
-
-    @OneToOne(mappedBy = "owner")
-    private Otp otp;
+    @Column(name = "is_verified", nullable = false)
+    @Builder.Default
+    private Boolean isVerified = false;
 }

@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface ReportRepository extends JpaRepository<Item, Long> {
-    
-    List<Item> findAllByIsRemovedFalse();
+
+    List<Item> findAllByCategory_Id(Long categoryId);
 }

@@ -3,12 +3,10 @@ package com.nexus.nexus.Service.ServiceImplementation;
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
 import com.nexus.nexus.Entity.Category;
-import com.nexus.nexus.Entity.MapTile;
 import com.nexus.nexus.Entity.Item;
 import com.nexus.nexus.Entity.User;
 import com.nexus.nexus.Mapper.ProductMapper;
 import com.nexus.nexus.Repository.CategoryRepository;
-import com.nexus.nexus.Repository.MapTileRepository;
 import com.nexus.nexus.Repository.ReportRepository;
 import com.nexus.nexus.Repository.UserRepository;
 import com.nexus.nexus.Security.JwtPrincipal;
@@ -17,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,66 +26,67 @@ public class ProductServiceImpl implements ProductService {
 
     private final ReportRepository reportRepository;
     private final CategoryRepository categoryRepository;
-    private final MapTileRepository mapTileRepository;
     private final UserRepository userRepository;
     private final ProductMapper productMapper;
 
-    private static final int ABUSE_REPORT_THRESHOLD = 5;
-
     @Override
     public List<ProductResponseDto> findAllProducts() {
-        List<Item> items = reportRepository.findAllByIsRemovedFalse();
+        List<Item> items = reportRepository.findAll();
         return productMapper.toDtoList(items);
     }
 
     @Override
-    public ProductResponseDto addProduct(ProductRequestDto request, JwtPrincipal principal) {
+    public List<ProductResponseDto> searchProducts(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return findAllProducts();
+        }
 
+        try {
+            Long categoryId = Long.parseLong(keyword.trim());
+            return productMapper.toDtoList(reportRepository.findAllByCategory_Id(categoryId));
+        } catch (NumberFormatException e) {
+            return List.of();
+        }
+    }
+
+    @Override
+    public ProductResponseDto addProduct(ProductRequestDto request, JwtPrincipal principal) {
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");
         }
         validatePrincipal(principal);
 
-        if (request.getItemName() == null || request.getItemName().isEmpty()) {
-            throw new IllegalArgumentException("Item name is required");
+        if (request.getName() == null || request.getName().isBlank()) {
+            throw new IllegalArgumentException("Name is required");
         }
-
-        if (request.getReportedAt() == null) {
-            throw new IllegalArgumentException("Reported at time is required");
-        }
-
-        if (request.getLocationLongitude() == null || request.getLocationLatitude() == null) {
-            throw new IllegalArgumentException("Location coordinates are required");
-        }
-
         if (request.getType() == null) {
-            throw new IllegalArgumentException("Type of report is required");
+            throw new IllegalArgumentException("Type is required");
         }
-
-        if (request.getCategoryName() == null || request.getCategoryName().isEmpty()) {
+        if (request.getStatus() == null) {
+            throw new IllegalArgumentException("Status is required");
+        }
+        if (request.getLatitude() == null || request.getLongitude() == null) {
+            throw new IllegalArgumentException("Latitude and longitude are required");
+        }
+        if (request.getCategoryId() == null) {
             throw new IllegalArgumentException("Category is required");
         }
 
-        User applicant = resolveApplicantFromPrincipal(principal);
+        User reporter = resolveReporterFromPrincipal(principal);
 
-        Category category = categoryRepository.findById(request.getCategoryName())
+        Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Category not found"));
 
-        MapTile location = MapTile.builder()
-                .longitude(request.getLocationLongitude())
-                .latitude(request.getLocationLatitude())
-                .build();
-        location = mapTileRepository.save(location);
-
         Item item = Item.builder()
-                .itemName(request.getItemName())
+                .name(request.getName())
                 .description(request.getDescription())
                 .type(request.getType())
                 .status(request.getStatus())
-                .reportedAt(request.getReportedAt())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .image(request.getImage())
                 .category(category)
-                .applicant(applicant)
-                .location(location)
+                .reporter(reporter)
                 .build();
         item = reportRepository.save(item);
 
@@ -103,14 +102,12 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("Product not found");
         }
 
-        // Verify that the product belongs to the authenticated user
         Item foundItem = report.get();
-        if (!foundItem.getApplicant().getEmail().equals(principal.email())) {
+        if (!foundItem.getReporter().getEmail().equals(principal.email())) {
             throw new SecurityException("You are not authorized to delete this product");
         }
 
-        reportRepository.deleteById(productId);
-
+        reportRepository.delete(foundItem);
         return productMapper.toDto(foundItem);
     }
 
@@ -125,42 +122,37 @@ public class ProductServiceImpl implements ProductService {
         }
         Item foundItem = report.get();
 
-        // Verify that the product belongs to the authenticated user
-        if (!foundItem.getApplicant().getEmail().equals(principal.email())) {
+        if (!foundItem.getReporter().getEmail().equals(principal.email())) {
             throw new SecurityException("You are not authorized to update this product");
         }
 
-        if (request.getItemName() != null) {
-            foundItem.setItemName(request.getItemName());
-        }
-
-        if (request.getDescription() != null) {
-            foundItem.setDescription(request.getDescription());
-        }
-
-        if (request.getType() != null) {
-            foundItem.setType(request.getType());
-        }
-
-        if (request.getStatus() != null) {
-            foundItem.setStatus(request.getStatus());
-        }
-
-        if (request.getReportedAt() != null) {
-            foundItem.setReportedAt(request.getReportedAt());
-        }
-
-        if (request.getCategoryName() != null) {
-            Category category = categoryRepository.findById(request.getCategoryName())
-                    .orElseThrow(() -> new IllegalArgumentException("Category not found"));
-            foundItem.setCategory(category);
-        }
-
-        if (request.getLocationLongitude() != null && request.getLocationLatitude() != null) {
-            MapTile location = foundItem.getLocation();
-            location.setLongitude(request.getLocationLongitude());
-            location.setLatitude(request.getLocationLatitude());
-            mapTileRepository.save(location);
+        if (request != null) {
+            if (request.getName() != null) {
+                foundItem.setName(request.getName());
+            }
+            if (request.getDescription() != null) {
+                foundItem.setDescription(request.getDescription());
+            }
+            if (request.getType() != null) {
+                foundItem.setType(request.getType());
+            }
+            if (request.getStatus() != null) {
+                foundItem.setStatus(request.getStatus());
+            }
+            if (request.getLatitude() != null) {
+                foundItem.setLatitude(request.getLatitude());
+            }
+            if (request.getLongitude() != null) {
+                foundItem.setLongitude(request.getLongitude());
+            }
+            if (request.getImage() != null) {
+                foundItem.setImage(request.getImage());
+            }
+            if (request.getCategoryId() != null) {
+                Category category = categoryRepository.findById(request.getCategoryId())
+                        .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                foundItem.setCategory(category);
+            }
         }
 
         foundItem = reportRepository.save(foundItem);
@@ -171,24 +163,10 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public void reportItem(Long itemId, JwtPrincipal principal) {
         validatePrincipal(principal);
-        
-        // Find the item
         Item item = reportRepository.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Item not found"));
-        
-        // Check if item is already removed
-        if (item.getIsRemoved()) {
-            throw new IllegalArgumentException("Item has already been removed");
-        }
-        
-        // Increment counter
-        item.setReportsCounter(item.getReportsCounter() + 1);
-        
-        // Check if threshold is reached
-        if (item.getReportsCounter() >= ABUSE_REPORT_THRESHOLD) {
-            item.setIsRemoved(true);
-        }
-        
+        item.setReportedCounts(item.getReportedCounts() + 1);
+        item.setUpdatedAt(OffsetDateTime.now());
         reportRepository.save(item);
     }
 
@@ -201,7 +179,7 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    private User resolveApplicantFromPrincipal(JwtPrincipal principal) {
+    private User resolveReporterFromPrincipal(JwtPrincipal principal) {
         return userRepository.findByEmail(principal.email())
                 .orElseGet(() -> {
                     String fullName = principal.name() != null && !principal.name().isBlank()
@@ -212,8 +190,10 @@ public class ProductServiceImpl implements ProductService {
                             .fullName(fullName)
                             .email(principal.email())
                             .password(UUID.randomUUID().toString())
-                            .registrationDate(LocalDateTime.now())
-                            .lastSeen(LocalDateTime.now())
+                            .registrationDate(OffsetDateTime.now())
+                            .lastSeen(OffsetDateTime.now())
+                            .isVerified(true)
+                            .isSuperuser(false)
                             .build();
                     return userRepository.save(newUser);
                 });

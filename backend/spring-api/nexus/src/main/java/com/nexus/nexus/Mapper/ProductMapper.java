@@ -1,9 +1,7 @@
 package com.nexus.nexus.Mapper;
 
-import com.nexus.nexus.Dto.ApplicantDto;
-import com.nexus.nexus.Dto.LocationDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
-import com.nexus.nexus.Entity.MapTile;
+import com.nexus.nexus.Dto.ReporterDto;
 import com.nexus.nexus.Entity.Item;
 import com.nexus.nexus.Entity.User;
 import org.mapstruct.Mapper;
@@ -14,15 +12,19 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ProductMapper {
 
+    @Mapping(source = "category.id", target = "categoryId")
     @Mapping(source = "category.name", target = "categoryName")
-    @Mapping(source = "applicant", target = "applicant")
-    @Mapping(source = "resolver", target = "resolver")
-    @Mapping(source = "location", target = "location")
+    @Mapping(source = "reporter", target = "reporter")
+    @Mapping(target = "type", expression = "java(item.getType() != null ? item.getType().name().toLowerCase() : null)")
+    @Mapping(target = "status", expression = "java(item.getStatus() != null ? item.getStatus().name().toLowerCase() : null)")
+    @Mapping(target = "latitude", expression = "java(item.getLatitude() != null ? item.getLatitude().toPlainString() : null)")
+    @Mapping(target = "longitude", expression = "java(item.getLongitude() != null ? item.getLongitude().toPlainString() : null)")
     ProductResponseDto toDto(Item item);
 
     List<ProductResponseDto> toDtoList(List<Item> items);
 
-    ApplicantDto toApplicantDto(User user);
-
-    LocationDto toLocationDto(MapTile mapTile);
+    @Mapping(source = "fullName", target = "name")
+    @Mapping(source = "registrationDate", target = "createdAt")
+    @Mapping(source = "isVerified", target = "isVerified")
+    ReporterDto toReporterDto(User user);
 }

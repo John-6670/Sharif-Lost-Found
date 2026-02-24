@@ -1,8 +1,7 @@
 package com.nexus.nexus.Service.ServiceImplementation;
 
 
-import java.time.LocalDateTime;
-import java.util.List;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -20,8 +19,6 @@ public class UserServiceImpl implements UserService{
 
     private final UserRepository userRepository;
 
-
-
     @Override
     public void registerUser(UserRegisterDto dto){
         if (dto == null) {
@@ -37,9 +34,9 @@ public class UserServiceImpl implements UserService{
             throw new IllegalArgumentException("This Email is not unique!");
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime registrationDate = dto.getCreated_at() != null ? dto.getCreated_at() : now;
-        LocalDateTime lastSeen = dto.getLast_seen() != null ? dto.getLast_seen() : now;
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime registrationDate = dto.getCreatedAt() != null ? dto.getCreatedAt() : now;
+        OffsetDateTime lastSeen = dto.getLastSeen() != null ? dto.getLastSeen() : now;
         String password = dto.getPassword();
         if (password == null || password.isBlank()) {
             password = UUID.randomUUID().toString();
@@ -49,12 +46,10 @@ public class UserServiceImpl implements UserService{
                 .email(dto.getEmail())
                 .fullName(dto.getName())
                 .password(password)
-                .contact("")
-                .applicantItems(List.of())
-                .resolvedItems(List.of())
+                .isSuperuser(false)
+                .isVerified(dto.isVerified())
                 .registrationDate(registrationDate)
                 .lastSeen(lastSeen)
-                .otp(null)
                 .build();
 
         userRepository.save(user);
@@ -88,9 +83,11 @@ public class UserServiceImpl implements UserService{
             user.setPassword(dto.getPassword());
         }
 
-        if (dto.getLast_seen() != null) {
-            user.setLastSeen(dto.getLast_seen());
+        if (dto.getLastSeen() != null) {
+            user.setLastSeen(dto.getLastSeen());
         }
+
+        user.setIsVerified(dto.isVerified());
 
         userRepository.save(user);
     }

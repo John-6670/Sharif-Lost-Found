@@ -17,12 +17,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/product")
+@RequestMapping("/api/items")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
 public class ProductController {
@@ -30,11 +31,21 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public ResponseEntity<ResponseModel<List<ProductResponseDto>>> getAllProducts() {
+    public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
         List<ProductResponseDto> response = productService.findAllProducts();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ResponseModel<List<ProductResponseDto>>> searchProducts(
+            @RequestParam String keyword) {
+        List<ProductResponseDto> response = productService.searchProducts(keyword);
+        String message = response.isEmpty()
+                ? "No items found matching '" + keyword + "'"
+                : "Search results fetched successfully";
         return ResponseEntity.ok(ResponseModel.<List<ProductResponseDto>>builder()
                 .success(true)
-                .message("Products fetched successfully")
+                .message(message)
                 .data(response)
                 .build());
     }

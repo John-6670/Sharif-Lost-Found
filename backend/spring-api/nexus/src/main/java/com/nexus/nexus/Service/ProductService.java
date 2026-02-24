@@ -17,4 +17,6 @@ public interface ProductService {
     ProductResponseDto updateProduct(Long productId, ProductRequestDto request, JwtPrincipal principal);
 
     void reportItem(Long itemId, JwtPrincipal principal);
+
+    List<ProductResponseDto> searchProducts(String keyword);
 }
