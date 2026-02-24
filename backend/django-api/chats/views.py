@@ -17,10 +17,10 @@ class ConversationListView(generics.ListAPIView):
     Get all conversations for the authenticated user with latest message info
     """
     permission_classes = [IsAuthenticated]
-
+    
     def get(self, request):
         user = request.user
-
+        
         conversations = Conversation.objects.filter(
             Q(user1=user) | Q(user2=user)
         ).annotate(
@@ -29,6 +29,7 @@ class ConversationListView(generics.ListAPIView):
                 'messages',
                 filter=Q(messages__is_read=False) & ~Q(messages__sender=user)
                 # Changed from Q(messages__sender__ne=user)
+                filter=Q(messages__is_read=False) & ~Q(messages__sender=user)  # Changed from Q(messages__sender__ne=user)
             )
         ).order_by('-last_message_time')
 
@@ -130,6 +131,9 @@ class ConversationCreateView(APIView):
 
         # Create new conversation
 
+        other_user = get_object_or_404(User, id=other_user_id)
+
+        from users.models import User
         other_user = get_object_or_404(User, id=other_user_id)
 
         conversation = Conversation.objects.create(
