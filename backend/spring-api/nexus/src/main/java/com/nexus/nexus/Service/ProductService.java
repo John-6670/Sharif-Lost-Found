@@ -21,4 +21,6 @@ public interface ProductService {
     void reportItem(Long itemId, JwtPrincipal principal);
 
     List<ProductResponseDto> searchProducts(String keyword);
+
+    List<ProductResponseDto> searchByLocation(double centerLat, double centerLon, double radiusKm);
 }

@@ -58,6 +58,23 @@ public class ProductController {
                 .build());
     }
 
+    @GetMapping("/search/location")
+    public ResponseEntity<ResponseModel<List<ProductResponseDto>>> searchByLocation(
+            @RequestParam double lat,
+            @RequestParam double lon,
+            @RequestParam double radiusKm) {
+
+        List<ProductResponseDto> response = productService.searchByLocation(lat, lon, radiusKm);
+        String message = response.isEmpty()
+                ? "No items found in the specified area"
+                : "Location search results fetched successfully";
+        return ResponseEntity.ok(ResponseModel.<List<ProductResponseDto>>builder()
+                .success(true)
+                .message(message)
+                .data(response)
+                .build());
+    }
+
     @PostMapping
     public ResponseEntity<ResponseModel<ProductResponseDto>> addProduct(
             @RequestBody ProductRequestDto request) {

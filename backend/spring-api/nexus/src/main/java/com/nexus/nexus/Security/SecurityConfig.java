@@ -56,6 +56,7 @@ public class SecurityConfig {
                                 "/api/items",
                                 "/api/items/*",
                                 "/api/items/*/comments",
+                                "/api/items/search/location",
                                 "/api/product",
                                 "/api/product/search",
                                 "/api/product/*/comments").permitAll()

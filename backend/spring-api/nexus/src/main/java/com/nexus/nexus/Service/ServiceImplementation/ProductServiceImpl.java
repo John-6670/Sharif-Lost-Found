@@ -57,6 +57,26 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public List<ProductResponseDto> searchByLocation(double centerLat, double centerLon, double radiusKm) {
+        if (radiusKm <= 0) {
+            throw new IllegalArgumentException("Radius must be greater than 0");
+        }
+
+        double latDelta = radiusKm / 111.0; // ~111 km per degree latitude
+        double lonDelta = radiusKm / (111.0 * Math.cos(Math.toRadians(centerLat)));
+
+        java.math.BigDecimal minLat = java.math.BigDecimal.valueOf(centerLat - latDelta);
+        java.math.BigDecimal maxLat = java.math.BigDecimal.valueOf(centerLat + latDelta);
+        java.math.BigDecimal minLon = java.math.BigDecimal.valueOf(centerLon - lonDelta);
+        java.math.BigDecimal maxLon = java.math.BigDecimal.valueOf(centerLon + lonDelta);
+
+        List<Item> items = reportRepository.findByLatitudeBetweenAndLongitudeBetween(
+                minLat, maxLat, minLon, maxLon
+        );
+        return productMapper.toDtoList(items);
+    }
+
+    @Override
     public ProductResponseDto addProduct(ProductRequestDto request, JwtPrincipal principal) {
         if (request == null) {
             throw new IllegalArgumentException("Request cannot be null");
