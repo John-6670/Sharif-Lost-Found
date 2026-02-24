@@ -2,6 +2,7 @@ package com.nexus.nexus.Dto;
 
 import com.nexus.nexus.Enumaration.Status;
 import com.nexus.nexus.Enumaration.TypeOfReport;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,4 +26,7 @@ public class ProductRequestDto {
     private BigDecimal longitude;
     private String image;
     private Long categoryId;
+
+    @JsonProperty("category_name")
+    private String categoryName;
 }
