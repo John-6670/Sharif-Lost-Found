@@ -2,6 +2,7 @@ package com.nexus.nexus.Controller;
 
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
+import com.nexus.nexus.Models.ResponseModel;
 import com.nexus.nexus.Security.JwtPrincipal;
 import com.nexus.nexus.Service.ProductService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/product")
+@RequestMapping("/api/items")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
 public class ProductController {
