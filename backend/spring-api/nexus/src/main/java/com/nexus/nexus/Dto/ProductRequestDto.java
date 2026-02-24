@@ -25,4 +25,7 @@ public class ProductRequestDto {
     private String categoryName;
     private Double locationLongitude;
     private Double locationLatitude;
+
+    /** Optional image as a Base64-encoded string. */
+    private String imageBase64;
 }

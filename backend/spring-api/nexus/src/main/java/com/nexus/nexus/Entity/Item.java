@@ -76,4 +76,8 @@ public class Item {
     @Column(name = "is_removed", nullable = false)
     @Builder.Default
     private Boolean isRemoved = false;
+
+    /** Raw image bytes stored as binary (PostgreSQL bytea). Frontend sends/receives Base64. */
+    @Column(name = "image", columnDefinition = "bytea")
+    private byte[] image;
 }

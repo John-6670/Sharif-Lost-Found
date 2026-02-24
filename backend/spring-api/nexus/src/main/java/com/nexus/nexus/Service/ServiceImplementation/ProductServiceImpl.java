@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -101,6 +102,7 @@ public class ProductServiceImpl implements ProductService {
                 .category(category)
                 .applicant(applicant)
                 .location(location)
+                .image(decodeImage(request.getImageBase64()))
                 .build();
         item = reportRepository.save(item);
 
@@ -182,6 +184,10 @@ public class ProductServiceImpl implements ProductService {
             mapTileRepository.save(location);
         }
 
+        if (request.getImageBase64() != null) {
+            foundItem.setImage(decodeImage(request.getImageBase64()));
+        }
+
         foundItem = reportRepository.save(foundItem);
         return productMapper.toDto(foundItem);
     }
@@ -217,6 +223,20 @@ public class ProductServiceImpl implements ProductService {
         }
         if (!principal.verified()) {
             throw new SecurityException("User is not verified");
+        }
+    }
+
+    /**
+     * Decodes a Base64 string to bytes.
+     * Returns null if the input is null or blank (image is optional).
+     * Throws IllegalArgumentException if the string is not valid Base64.
+     */
+    private byte[] decodeImage(String base64) {
+        if (base64 == null || base64.isBlank()) return null;
+        try {
+            return Base64.getDecoder().decode(base64);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid Base64 image data");
         }
     }
 

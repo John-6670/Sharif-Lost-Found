@@ -24,4 +24,7 @@ public class ProductResponseDto {
     private ApplicantDto applicant;
     private ApplicantDto resolver;
     private LocationDto location;
+
+    /** Image returned as a Base64-encoded string; null when no image is stored. */
+    private String imageBase64;
 }
