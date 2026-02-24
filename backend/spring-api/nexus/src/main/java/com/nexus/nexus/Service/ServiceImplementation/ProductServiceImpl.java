@@ -68,14 +68,13 @@ public class ProductServiceImpl implements ProductService {
         if (request.getLatitude() == null || request.getLongitude() == null) {
             throw new IllegalArgumentException("Latitude and longitude are required");
         }
-        if (request.getCategoryId() == null) {
+        if (request.getCategoryId() == null && (request.getCategoryName() == null || request.getCategoryName().isBlank())) {
             throw new IllegalArgumentException("Category is required");
         }
 
         User reporter = resolveReporterFromPrincipal(principal);
 
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        Category category = resolveCategory(request);
 
         Item item = Item.builder()
                 .name(request.getName())
@@ -148,9 +147,8 @@ public class ProductServiceImpl implements ProductService {
             if (request.getImage() != null) {
                 foundItem.setImage(request.getImage());
             }
-            if (request.getCategoryId() != null) {
-                Category category = categoryRepository.findById(request.getCategoryId())
-                        .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+            if (request.getCategoryId() != null || (request.getCategoryName() != null && !request.getCategoryName().isBlank())) {
+                Category category = resolveCategory(request);
                 foundItem.setCategory(category);
             }
         }
@@ -197,5 +195,14 @@ public class ProductServiceImpl implements ProductService {
                             .build();
                     return userRepository.save(newUser);
                 });
+    }
+
+    private Category resolveCategory(ProductRequestDto request) {
+        if (request.getCategoryId() != null) {
+            return categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        }
+        return categoryRepository.findByNameIgnoreCase(request.getCategoryName().trim())
+                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
     }
 }
