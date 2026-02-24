@@ -68,7 +68,8 @@ public class ProductServiceImpl implements ProductService {
         if (request.getLatitude() == null || request.getLongitude() == null) {
             throw new IllegalArgumentException("Latitude and longitude are required");
         }
-        if (request.getCategoryId() == null && (request.getCategoryName() == null || request.getCategoryName().isBlank())) {
+        if (request.getCategoryId() == null
+                && (request.getCategoryName() == null || request.getCategoryName().isBlank())) {
             throw new IllegalArgumentException("Category is required");
         }
 
@@ -78,7 +79,7 @@ public class ProductServiceImpl implements ProductService {
 
         Item item = Item.builder()
                 .name(request.getName())
-                .description(request.getDescription())
+                .description(request.getDescription() != null ? request.getDescription() : request.getNotes())
                 .type(request.getType())
                 .status(request.getStatus())
                 .latitude(request.getLatitude())
@@ -131,6 +132,8 @@ public class ProductServiceImpl implements ProductService {
             }
             if (request.getDescription() != null) {
                 foundItem.setDescription(request.getDescription());
+            } else if (request.getNotes() != null) {
+                foundItem.setDescription(request.getNotes());
             }
             if (request.getType() != null) {
                 foundItem.setType(request.getType());
@@ -147,7 +150,8 @@ public class ProductServiceImpl implements ProductService {
             if (request.getImage() != null) {
                 foundItem.setImage(request.getImage());
             }
-            if (request.getCategoryId() != null || (request.getCategoryName() != null && !request.getCategoryName().isBlank())) {
+            if (request.getCategoryId() != null
+                    || (request.getCategoryName() != null && !request.getCategoryName().isBlank())) {
                 Category category = resolveCategory(request);
                 foundItem.setCategory(category);
             }

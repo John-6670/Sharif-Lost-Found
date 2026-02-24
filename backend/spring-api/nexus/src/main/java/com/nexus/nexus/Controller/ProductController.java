@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -64,21 +65,17 @@ public class ProductController {
                 .build());
     }
 
-    @DeleteMapping("/{productId}")
-    public ResponseEntity<ResponseModel<ProductResponseDto>> deleteProduct(
+    @DeleteMapping({"/{productId}", "/{productId}/"})
+    public ResponseEntity<Void> deleteProduct(
             @PathVariable Long productId) {
 
         JwtPrincipal principal = getJwtPrincipal();
 
-        ProductResponseDto response = productService.deleteProduct(productId, principal);
-        return ResponseEntity.ok(ResponseModel.<ProductResponseDto>builder()
-                .success(true)
-                .message("Product deleted successfully")
-                .data(response)
-                .build());
+        productService.deleteProduct(productId, principal);
+        return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{productId}")
+    @PatchMapping("/{productId}")
     public ResponseEntity<ResponseModel<ProductResponseDto>> updateProduct(
             @RequestBody ProductRequestDto request,
             @PathVariable Long productId) {
