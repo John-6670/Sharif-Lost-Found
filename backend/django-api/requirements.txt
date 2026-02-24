@@ -12,3 +12,6 @@ psycopg2
 psycopg2-binary
 django-cors-headers
 requests
+channels~=4.2.0
+channels-redis~=4.2.1
+daphne~=4.2.0
