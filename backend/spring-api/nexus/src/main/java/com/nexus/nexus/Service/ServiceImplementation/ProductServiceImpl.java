@@ -41,6 +41,15 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public List<ProductResponseDto> searchProducts(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return findAllProducts();
+        }
+        List<Item> items = reportRepository.searchByKeyword(keyword.trim());
+        return productMapper.toDtoList(items);
+    }
+
+    @Override
     public ProductResponseDto addProduct(ProductRequestDto request, JwtPrincipal principal) {
 
         if (request == null) {

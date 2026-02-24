@@ -51,7 +51,10 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/h2-console/**"  // dev only – H2 browser console
                         ).permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/product").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/product",
+                                "/api/product/search",
+                                "/api/product/*/comments").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()
                 )
