@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Base64;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -129,7 +130,7 @@ public class ProductServiceImpl implements ProductService {
                 .status(request.getStatus())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
-                .image(request.getImage())
+                .image(parseImageBase64(request.getImage()))
                 .category(category)
                 .reporter(reporter)
                 .build();
@@ -193,7 +194,7 @@ public class ProductServiceImpl implements ProductService {
                 foundItem.setLongitude(request.getLongitude());
             }
             if (request.getImage() != null) {
-                foundItem.setImage(request.getImage());
+                foundItem.setImage(parseImageBase64(request.getImage()));
             }
             if (request.getCategoryId() != null
                     || (request.getCategoryName() != null && !request.getCategoryName().isBlank())) {
@@ -253,5 +254,17 @@ public class ProductServiceImpl implements ProductService {
         }
         return categoryRepository.findByNameIgnoreCase(request.getCategoryName().trim())
                 .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+    }
+
+    private byte[] parseImageBase64(String image) {
+        if (image == null || image.isBlank()) {
+            return null;
+        }
+        String trimmed = image.trim();
+        int commaIndex = trimmed.indexOf(',');
+        if (commaIndex >= 0) {
+            trimmed = trimmed.substring(commaIndex + 1);
+        }
+        return Base64.getDecoder().decode(trimmed);
     }
 }

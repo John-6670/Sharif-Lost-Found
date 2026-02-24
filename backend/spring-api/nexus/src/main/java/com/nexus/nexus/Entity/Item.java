@@ -61,8 +61,9 @@ public class Item {
     @Column(name = "longitude", precision = 9, scale = 6, nullable = false)
     private BigDecimal longitude;
 
-    @Column(name = "image", columnDefinition = "TEXT")
-    private String image;
+    /** Raw image bytes stored as bytea in Postgres. */
+    @Column(name = "image", columnDefinition = "bytea")
+    private byte[] image;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "reporter_id", nullable = false)

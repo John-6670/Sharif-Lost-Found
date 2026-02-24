@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -49,14 +49,11 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/swagger-ui",
-                                "/webjars/**",
-                                "/h2-console/**"  // dev only – H2 browser console
+                                "/webjars/**"
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/items",
-                                "/api/items/*",
-                                "/api/items/*/comments",
-                                "/api/items/search/location",
+                                "/api/items",
                                 "/api/product",
                                 "/api/product/search",
                                 "/api/product/*/comments").permitAll()
