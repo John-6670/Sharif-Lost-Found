@@ -2,8 +2,10 @@ package com.nexus.nexus.Controller;
 
 import com.nexus.nexus.Dto.CommentRequestDto;
 import com.nexus.nexus.Dto.CommentResponseDto;
+import com.nexus.nexus.Dto.ReportCommentRequestDto;
 import com.nexus.nexus.Models.ResponseModel;
 import com.nexus.nexus.Security.JwtPrincipal;
+import com.nexus.nexus.Service.CommentPage;
 import com.nexus.nexus.Service.CommentService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -16,9 +18,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/product/{itemId}/comments")
@@ -30,16 +31,17 @@ public class CommentController {
     /**
      * GET /api/product/{itemId}/comments
      * Public — no JWT required (criterion 1: view comments).
-     * Returns all top-level comments with nested replies (criterion 4).
-     * Empty list is returned with 200 OK to handle the no-result state (criterion 4).
+     * Returns paged top-level comments with nested replies.
      */
     @GetMapping
-    public ResponseEntity<ResponseModel<List<CommentResponseDto>>> getComments(
-            @PathVariable Long itemId) {
+    public ResponseEntity<ResponseModel<CommentPage>> getComments(
+            @PathVariable Long itemId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        List<CommentResponseDto> comments = commentService.getCommentsForItem(itemId);
-        String message = comments.isEmpty() ? "No comments yet" : "Comments fetched successfully";
-        return ResponseEntity.ok(ResponseModel.<List<CommentResponseDto>>builder()
+        CommentPage comments = commentService.getCommentsForItem(itemId, page, size);
+        String message = comments.items().isEmpty() ? "No comments yet" : "Comments fetched successfully";
+        return ResponseEntity.ok(ResponseModel.<CommentPage>builder()
                 .success(true)
                 .message(message)
                 .data(comments)
@@ -65,6 +67,25 @@ public class CommentController {
                         .message("Comment added successfully")
                         .data(created)
                         .build());
+    }
+
+    /**
+     * POST /api/product/{itemId}/comments/{commentId}/report
+     * Requires JWT. Body: { "cause": "..." }
+     */
+    @PostMapping("/{commentId}/report")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ResponseModel<Void>> reportComment(
+            @PathVariable Long itemId,
+            @PathVariable Long commentId,
+            @RequestBody ReportCommentRequestDto request) {
+
+        JwtPrincipal principal = getJwtPrincipal();
+        commentService.reportComment(itemId, commentId, request != null ? request.getCause() : null, principal);
+        return ResponseEntity.ok(ResponseModel.<Void>builder()
+                .success(true)
+                .message("Comment reported successfully")
+                .build());
     }
 
     private JwtPrincipal getJwtPrincipal() {

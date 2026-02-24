@@ -6,18 +6,23 @@ import com.nexus.nexus.Entity.Comment;
 import com.nexus.nexus.Entity.Item;
 import com.nexus.nexus.Entity.User;
 import com.nexus.nexus.Mapper.CommentMapper;
+import com.nexus.nexus.Repository.CommentReportRepository;
 import com.nexus.nexus.Repository.CommentRepository;
 import com.nexus.nexus.Repository.ReportRepository;
 import com.nexus.nexus.Repository.UserRepository;
 import com.nexus.nexus.Security.JwtPrincipal;
+import com.nexus.nexus.Service.CommentPage;
 import com.nexus.nexus.Service.CommentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,44 +33,61 @@ import java.util.UUID;
 public class CommentServiceImpl implements CommentService {
 
     private final CommentRepository commentRepository;
+    private final CommentReportRepository commentReportRepository;
     private final ReportRepository reportRepository;
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
 
     @Override
     @Transactional(readOnly = true)
-    public List<CommentResponseDto> getCommentsForItem(Long itemId) {
+    public CommentPage getCommentsForItem(Long itemId, int page, int size) {
         // Verify item exists
         reportRepository.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Item not found"));
 
-        // Single query — fetch all comments for this item ordered by creation time
-        List<Comment> all = commentRepository.findByItemIdOrderByCreatedAtAsc(itemId);
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, size);
 
-        // Build id -> dto map (preserving insertion order = chronological)
-        Map<Long, CommentResponseDto> dtoMap = new LinkedHashMap<>();
-        for (Comment c : all) {
-            CommentResponseDto dto = commentMapper.toDto(c);
+        Page<Comment> rootsPage = commentRepository.findByItemIdAndParentIsNullOrderByCreatedAtAsc(
+                itemId, PageRequest.of(safePage, safeSize));
+        List<Comment> roots = rootsPage.getContent();
+
+        List<Long> rootIds = roots.stream().map(Comment::getId).toList();
+        List<Comment> replies = rootIds.isEmpty()
+                ? List.of()
+                : commentRepository.findByParentIdInOrderByCreatedAtAsc(rootIds);
+
+        Map<Long, CommentResponseDto> rootDtoMap = new LinkedHashMap<>();
+        for (Comment root : roots) {
+            CommentResponseDto dto = commentMapper.toDto(root);
             dto.setReplies(new ArrayList<>());
-            dtoMap.put(c.getId(), dto);
+            rootDtoMap.put(root.getId(), dto);
         }
 
-        // Wire up the tree: replies attach to their parent, roots collected separately
-        List<CommentResponseDto> roots = new ArrayList<>();
-        for (Comment c : all) {
-            CommentResponseDto dto = dtoMap.get(c.getId());
-            if (c.getParent() == null) {
-                roots.add(dto);
-            } else {
-                CommentResponseDto parentDto = dtoMap.get(c.getParent().getId());
-                if (parentDto != null) {
-                    parentDto.getReplies().add(dto);
-                } else {
-                    roots.add(dto); // safety fallback for orphaned comments
-                }
+        Map<Long, List<CommentResponseDto>> repliesByParent = new HashMap<>();
+        for (Comment reply : replies) {
+            CommentResponseDto dto = commentMapper.toDto(reply);
+            dto.setReplies(new ArrayList<>());
+            repliesByParent.computeIfAbsent(reply.getParent().getId(), key -> new ArrayList<>())
+                    .add(dto);
+        }
+
+        for (Map.Entry<Long, List<CommentResponseDto>> entry : repliesByParent.entrySet()) {
+            CommentResponseDto parent = rootDtoMap.get(entry.getKey());
+            if (parent != null) {
+                parent.getReplies().addAll(entry.getValue());
             }
         }
-        return roots;
+
+        List<CommentResponseDto> items = new ArrayList<>(rootDtoMap.values());
+        return new CommentPage(
+                items,
+                safePage,
+                safeSize,
+                rootsPage.getTotalElements(),
+                rootsPage.getTotalPages(),
+                rootsPage.hasNext()
+        );
     }
 
     @Override
@@ -106,6 +128,47 @@ public class CommentServiceImpl implements CommentService {
         CommentResponseDto dto = commentMapper.toDto(comment);
         dto.setReplies(new ArrayList<>());
         return dto;
+    }
+
+    @Override
+    @Transactional
+    public void reportComment(Long itemId, Long commentId, String cause, JwtPrincipal principal) {
+        validatePrincipal(principal);
+
+        if (cause == null || cause.isBlank()) {
+            throw new IllegalArgumentException("Report cause is required");
+        }
+
+        // Verify item exists
+        reportRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
+        if (!comment.getItem().getId().equals(itemId)) {
+            throw new IllegalArgumentException("Comment does not belong to this item");
+        }
+
+        User reporter = resolveAuthor(principal);
+
+        if (commentReportRepository.existsByCommentIdAndReporterId(commentId, reporter.getId())) {
+            throw new IllegalArgumentException("You have already reported this comment");
+        }
+
+        commentReportRepository.save(com.nexus.nexus.Entity.CommentReport.builder()
+                .comment(comment)
+                .reporter(reporter)
+                .cause(cause.trim())
+                .createdAt(OffsetDateTime.now())
+                .build());
+
+        long reportCount = commentReportRepository.countByCommentId(commentId);
+        if (reportCount >= 3) {
+            // Delete replies first to avoid FK violations
+            commentRepository.deleteByParentId(commentId);
+            commentReportRepository.deleteByCommentId(commentId);
+            commentRepository.deleteById(commentId);
+        }
     }
 
     private void validatePrincipal(JwtPrincipal principal) {

@@ -1,6 +1,8 @@
 package com.nexus.nexus.Repository;
 
 import com.nexus.nexus.Entity.Comment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,4 +19,12 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     /** All comments for an item (any depth), ordered oldest-first — used to build the full tree. */
     List<Comment> findByItemIdOrderByCreatedAtAsc(Long itemId);
+
+    /** Paged top-level comments for an item, ordered oldest-first. */
+    Page<Comment> findByItemIdAndParentIsNullOrderByCreatedAtAsc(Long itemId, Pageable pageable);
+
+    /** Replies for a set of parent comments, ordered oldest-first. */
+    List<Comment> findByParentIdInOrderByCreatedAtAsc(List<Long> parentIds);
+
+    void deleteByParentId(Long parentId);
 }

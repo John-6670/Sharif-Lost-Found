@@ -8,9 +8,12 @@ import java.util.List;
 
 public interface CommentService {
 
-    /** Returns all top-level comments for an item, each with their replies nested inside. */
-    List<CommentResponseDto> getCommentsForItem(Long itemId);
+    /** Returns paged top-level comments for an item, each with their replies nested inside. */
+    CommentPage getCommentsForItem(Long itemId, int page, int size);
 
     /** Creates a top-level comment (parentCommentId == null) or a reply. */
     CommentResponseDto addComment(Long itemId, CommentRequestDto request, JwtPrincipal principal);
+
+    /** Reports a comment; deletes it after 3 distinct reports. */
+    void reportComment(Long itemId, Long commentId, String cause, JwtPrincipal principal);
 }
