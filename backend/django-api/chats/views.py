@@ -9,23 +9,26 @@ from rest_framework.views import APIView
 from .models import Conversation, Message
 from .serializers import MessageSerializer
 
+from users.models import User
+
 
 class ConversationListView(generics.ListAPIView):
     """
     Get all conversations for the authenticated user with latest message info
     """
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request):
         user = request.user
-        
+
         conversations = Conversation.objects.filter(
             Q(user1=user) | Q(user2=user)
         ).annotate(
             last_message_time=Max('messages__created_at'),
             unread_count=Count(
                 'messages',
-                filter=Q(messages__is_read=False) & ~Q(messages__sender=user)  # Changed from Q(messages__sender__ne=user)
+                filter=Q(messages__is_read=False) & ~Q(messages__sender=user)
+                # Changed from Q(messages__sender__ne=user)
             )
         ).order_by('-last_message_time')
 
@@ -33,7 +36,7 @@ class ConversationListView(generics.ListAPIView):
         for conv in conversations:
             other_user = conv.user2 if conv.user1 == user else conv.user1
             last_message = conv.messages.order_by('-created_at').first()
-            
+
             data.append({
                 'id': conv.id,
                 'other_user': {
@@ -57,7 +60,7 @@ class ConversationDetailView(generics.RetrieveAPIView):
     Get a specific conversation with all its messages
     """
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request, conversation_id):
         user = request.user
         conversation = get_object_or_404(
@@ -83,7 +86,7 @@ class ConversationDetailView(generics.RetrieveAPIView):
         serializer = MessageSerializer(messages, many=True)
 
         other_user = conversation.user2 if conversation.user1 == user else conversation.user1
-        
+
         return Response({
             'id': conversation.id,
             'other_user': {
@@ -126,9 +129,9 @@ class ConversationCreateView(APIView):
             }, status=status.HTTP_200_OK)
 
         # Create new conversation
-        from users.models import User
+
         other_user = get_object_or_404(User, id=other_user_id)
-        
+
         conversation = Conversation.objects.create(
             user1=user,
             user2=other_user
@@ -138,7 +141,6 @@ class ConversationCreateView(APIView):
             'id': conversation.id,
             'message': 'Conversation created successfully'
         }, status=status.HTTP_201_CREATED)
-
 
 
 class UnreadCountView(APIView):
