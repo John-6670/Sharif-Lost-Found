@@ -4,7 +4,7 @@ import binascii
 from rest_framework import serializers
 
 from users.serializers import UserPublicSerializer
-from .models import Item, ItemCategory
+from .models import Item, ItemCategory, Comment, CommentReport
 
 
 class ItemSerializer(serializers.ModelSerializer):
@@ -77,3 +77,19 @@ class ItemSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         return data
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    commenter = UserPublicSerializer(read_only=True)
+    item = serializers.PrimaryKeyRelatedField(queryset=Item.objects.all())
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'text', 'commenter', 'item',
+                'reports_count', 'created_at'
+        ]
+        read_only_fields = ['id', 'commenter', 'reports_count', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        # commenter is set by the view, so we don't expect it in validated_data
+        return super().create(validated_data)

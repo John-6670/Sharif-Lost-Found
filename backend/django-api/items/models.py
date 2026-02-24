@@ -39,3 +39,28 @@ class ItemReport(models.Model):
 
     def __str__(self):
         return f"Report for {self.item.name} by {self.reporter.username if self.reporter else 'Unknown'}"
+
+
+class Comment(models.Model):
+    text = models.TextField()
+    commenter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='comments')
+    reports_count = models.PositiveSmallIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.commenter.username} on {self.item.name}"
+
+
+class CommentReport(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='reports')
+    reported_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('comment', 'reported_by')
+
+    def __str__(self):
+        return f"Report for comment {self.comment.id} by {self.reported_by.username if self.reported_by else 'Unknown'}"
+

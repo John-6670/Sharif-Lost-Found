@@ -7,9 +7,8 @@ from rest_framework.permissions import IsAuthenticated, BasePermission, SAFE_MET
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Item, ItemReport
-from .serializers import ItemSerializer
-
+from .models import Item, ItemReport, Comment, CommentReport
+from .serializers import ItemSerializer, CommentSerializer
 
 class IsReporterOrReadOnly(BasePermission):
 	def has_object_permission(self, request, view, obj):
@@ -160,3 +159,67 @@ class ReportItemView(APIView):
 				return Response({'message': 'Item reported and removed due to multiple reports'}, status=status.HTTP_200_OK)
 
 		return Response({'message': 'Item reported successfully', 'total_reports': item.reported_counts}, status=status.HTTP_200_OK)
+
+
+class IsCommenterOrReadOnly(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        return obj.commenter_id == request.user.id
+
+
+class CommentListCreateView(APIView):
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        queryset = Comment.objects.select_related('commenter', 'item').all()
+        
+        # Filter by item if provided
+        item_id = self.request.query_params.get('item')
+        if item_id:
+            queryset = queryset.filter(item_id=item_id)
+        
+        return queryset.order_by('-created_at')
+
+    def get(self, request):
+        comments = self.get_queryset()
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = CommentSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save(commenter=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ReportCommentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, comment_id):
+        try:
+            comment = Comment.objects.get(id=comment_id)
+        except Comment.DoesNotExist:
+            return Response({'error': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if user already reported this comment
+        if CommentReport.objects.filter(comment=comment, reported_by=request.user).exists():
+            return Response({'error': 'You have already reported this comment'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create report and increment count atomically
+        with transaction.atomic():
+            CommentReport.objects.create(comment=comment, reported_by=request.user)
+            comment.reports_count += 1
+            comment.save()
+
+            # Check if comment should be deleted
+            if comment.reports_count >= 5:
+                comment.delete()
+                return Response({'message': 'Comment reported and removed due to multiple reports'}, status=status.HTTP_200_OK)
+
+        return Response({'message': 'Comment reported successfully', 'total_reports': comment.reports_count}, status=status.HTTP_200_OK)
