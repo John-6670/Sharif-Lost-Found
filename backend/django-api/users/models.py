@@ -34,6 +34,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)
     last_seen = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    notification_on_new_messages = models.BooleanField(default=True)
 
     objects = UserManager()
 

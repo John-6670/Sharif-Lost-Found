@@ -35,3 +35,40 @@ def send_otp(email, otp, name='User'):
         recipient_list=[email],
         fail_silently=False,
     )
+
+
+def send_new_message_notification(recipient_email, recipient_name, sender_name, is_new_conversation=False):
+    """
+    Send email notification when a user receives a new message.
+    
+    Args:
+        recipient_email: Email of the user receiving the message
+        recipient_name: Name of the user receiving the message
+        sender_name: Name of the user sending the message
+        is_new_conversation: Whether this is from a new person (True) or after 2+ days of silence (False)
+    """
+    if is_new_conversation:
+        subject = "Lost & Found System – New Message from a User"
+        intro_text = f"You have a new message from {sender_name}."
+    else:
+        subject = "Lost & Found System – Message from Recent Contact"
+        intro_text = f"{sender_name} has sent you a new message after a while."
+
+    message = f"""
+    Dear {recipient_name},
+
+    {intro_text}
+
+    Please log in to the Lost & Found System to view the message and reply.
+
+    Best regards,
+    Lost & Found System
+    """.strip()
+
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[recipient_email],
+        fail_silently=False,
+    )
