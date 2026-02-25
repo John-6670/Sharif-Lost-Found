@@ -4,9 +4,11 @@ import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
 import com.nexus.nexus.Entity.Category;
 import com.nexus.nexus.Entity.Item;
+import com.nexus.nexus.Entity.ItemReport;
 import com.nexus.nexus.Entity.User;
 import com.nexus.nexus.Mapper.ProductMapper;
 import com.nexus.nexus.Repository.CategoryRepository;
+import com.nexus.nexus.Repository.ItemReportRepository;
 import com.nexus.nexus.Repository.ReportRepository;
 import com.nexus.nexus.Repository.UserRepository;
 import com.nexus.nexus.Security.JwtPrincipal;
@@ -28,6 +30,7 @@ public class ProductServiceImpl implements ProductService {
     private final ReportRepository reportRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final ItemReportRepository itemReportRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -283,6 +286,20 @@ public class ProductServiceImpl implements ProductService {
         validatePrincipal(principal);
         Item item = reportRepository.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+        User reporter = resolveReporterFromPrincipal(principal);
+        if (itemReportRepository.existsByItemIdAndReporterId(itemId, reporter.getId())) {
+            throw new IllegalArgumentException("You have already reported this item");
+        }
+
+        ItemReport report = ItemReport.builder()
+                .item(item)
+                .reporter(reporter)
+                .cause("reported") // placeholder until a request body is added
+                .createdAt(OffsetDateTime.now())
+                .build();
+        itemReportRepository.save(report);
+
         item.setReportedCounts(item.getReportedCounts() + 1);
         item.setUpdatedAt(OffsetDateTime.now());
         reportRepository.save(item);
