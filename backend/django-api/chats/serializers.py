@@ -50,11 +50,12 @@ class ConversationSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(source="sender.name", read_only=True)
+    sender_id = serializers.IntegerField(source="sender.id", read_only=True)
 
     class Meta:
         model = Message
-        fields = ["id", "conversation", "sender", "sender_name", "body", "created_at", "is_read"]
-        read_only_fields = ["sender", "is_read"]
+        fields = ["id", "conversation", "sender", "sender_id", "sender_name", "body", "created_at", "is_read"]
+        read_only_fields = ["sender", "sender_id", "sender_name", "created_at", "is_read"]
 
 
 class GlobalMessageSerializer(serializers.ModelSerializer):

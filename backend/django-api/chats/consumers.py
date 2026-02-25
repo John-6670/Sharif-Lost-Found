@@ -16,7 +16,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     WebSocket consumer for handling real-time chat messages.
     Users connect to a specific conversation and can send/receive messages.
     """
-
+    
     async def connect(self):
         """Handle WebSocket connection"""
         self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']

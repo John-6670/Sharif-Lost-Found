@@ -5,9 +5,10 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q, Max, Count
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Conversation, Message
-from .serializers import MessageSerializer
+from .serializers import MessageSerializer, ConversationSerializer
 
 from users.models import User
 
@@ -24,36 +25,16 @@ class ConversationListView(generics.ListAPIView):
         conversations = Conversation.objects.filter(
             Q(user1=user) | Q(user2=user)
         ).annotate(
-            last_message_time=Max('messages__created_at'),
-            unread_count=Count(
-                'messages',
-                filter=Q(messages__is_read=False) & ~Q(messages__sender=user),
-                # Changed from Q(messages__sender__ne=user)
-                filter=Q(messages__is_read=False) & ~Q(messages__sender=user)  # Changed from Q(messages__sender__ne=user)
-            )
+            last_message_time=Max('messages__created_at')
         ).order_by('-last_message_time')
 
-        data = []
-        for conv in conversations:
-            other_user = conv.user2 if conv.user1 == user else conv.user1
-            last_message = conv.messages.order_by('-created_at').first()
-
-            data.append({
-                'id': conv.id,
-                'other_user': {
-                    'id': other_user.id,
-                    'name': other_user.name,
-                },
-                'last_message': {
-                    'body': last_message.body if last_message else None,
-                    'created_at': last_message.created_at if last_message else None,
-                    'sender_id': last_message.sender.id if last_message else None,
-                } if last_message else None,
-                'unread_count': conv.unread_count,
-                'created_at': conv.created_at,
-            })
-
-        return Response(data, status=status.HTTP_200_OK)
+        serializer = ConversationSerializer(
+            conversations, 
+            many=True, 
+            context={'request': request}
+        )
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ConversationDetailView(generics.RetrieveAPIView):
@@ -64,10 +45,7 @@ class ConversationDetailView(generics.RetrieveAPIView):
 
     def get(self, request, conversation_id):
         user = request.user
-        conversation = get_object_or_404(
-            Conversation,
-            id=conversation_id
-        )
+        conversation = get_object_or_404(Conversation, id=conversation_id)
 
         # Verify user is part of conversation
         if user not in [conversation.user1, conversation.user2]:
@@ -80,11 +58,11 @@ class ConversationDetailView(generics.RetrieveAPIView):
         Message.objects.filter(
             conversation=conversation,
             is_read=False
-        ).exclude(sender=user).update(is_read=True)  # Changed from filter with sender__ne
+        ).exclude(sender=user).update(is_read=True)
 
         # Get messages
         messages = conversation.messages.select_related('sender').order_by('created_at')
-        serializer = MessageSerializer(messages, many=True)
+        message_serializer = MessageSerializer(messages, many=True)
 
         other_user = conversation.user2 if conversation.user1 == user else conversation.user1
 
@@ -93,12 +71,17 @@ class ConversationDetailView(generics.RetrieveAPIView):
             'other_user': {
                 'id': other_user.id,
                 'name': other_user.name,
+                'email': other_user.email,
             },
-            'messages': serializer.data,
+            'messages': message_serializer.data,
+            'created_at': conversation.created_at,
         }, status=status.HTTP_200_OK)
 
 
 class ConversationCreateView(APIView):
+    """
+    Create a new conversation or return existing one
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -117,25 +100,27 @@ class ConversationCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        other_user = get_object_or_404(User, id=other_user_id)
+
         # Check if conversation already exists (in either direction)
         conversation = Conversation.objects.filter(
-            Q(user1=user, user2_id=other_user_id) |
-            Q(user1_id=other_user_id, user2=user)
+            Q(user1=user, user2=other_user) |
+            Q(user1=other_user, user2=user)
         ).first()
 
         if conversation:
             return Response({
                 'id': conversation.id,
-                'message': 'Conversation already exists'
+                'created': False,
+                'other_user': {
+                    'id': other_user.id,
+                    'name': other_user.name,
+                    'email': other_user.email,
+                },
+                'created_at': conversation.created_at,
             }, status=status.HTTP_200_OK)
 
         # Create new conversation
-
-        other_user = get_object_or_404(User, id=other_user_id)
-
-        from users.models import User
-        other_user = get_object_or_404(User, id=other_user_id)
-
         conversation = Conversation.objects.create(
             user1=user,
             user2=other_user
@@ -143,7 +128,13 @@ class ConversationCreateView(APIView):
 
         return Response({
             'id': conversation.id,
-            'message': 'Conversation created successfully'
+            'created': True,
+            'other_user': {
+                'id': other_user.id,
+                'name': other_user.name,
+                'email': other_user.email,
+            },
+            'created_at': conversation.created_at,
         }, status=status.HTTP_201_CREATED)
 
 
@@ -155,11 +146,103 @@ class UnreadCountView(APIView):
         unread_count = Message.objects.filter(
             conversation__user1=user,
             is_read=False
-        ).exclude(sender=user).count() + Message.objects.filter(  # Changed from filter with sender__ne
+        ).exclude(sender=user).count() + Message.objects.filter(
             conversation__user2=user,
             is_read=False
-        ).exclude(sender=user).count()  # Changed from filter with sender__ne
+        ).exclude(sender=user).count()
 
         return Response({
             'unread_count': unread_count
+        }, status=status.HTTP_200_OK)
+
+
+class MessagePagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class ConversationMessagesView(APIView):
+    """
+    GET: Get paginated messages for a conversation
+    POST: Send a new message to a conversation
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, conversation_id):
+        user = request.user
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+
+        # Verify user is part of conversation
+        if user not in [conversation.user1, conversation.user2]:
+            return Response(
+                {'error': 'You are not part of this conversation'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get messages with pagination
+        messages = conversation.messages.select_related('sender').order_by('-created_at')
+        
+        paginator = MessagePagination()
+        paginated_messages = paginator.paginate_queryset(messages, request)
+        serializer = MessageSerializer(paginated_messages, many=True)
+
+        return paginator.get_paginated_response(serializer.data)
+
+    def post(self, request, conversation_id):
+        user = request.user
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+
+        # Verify user is part of conversation
+        if user not in [conversation.user1, conversation.user2]:
+            return Response(
+                {'error': 'You are not part of this conversation'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        body = request.data.get('body') or request.data.get('message')
+        
+        if not body or not body.strip():
+            return Response(
+                {'error': 'Message body cannot be empty'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create message
+        message = Message.objects.create(
+            conversation=conversation,
+            sender=user,
+            body=body.strip()
+        )
+
+        serializer = MessageSerializer(message)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class MarkMessagesReadView(APIView):
+    """
+    Mark all messages in a conversation as read
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, conversation_id):
+        user = request.user
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+
+        # Verify user is part of conversation
+        if user not in [conversation.user1, conversation.user2]:
+            return Response(
+                {'error': 'You are not part of this conversation'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Mark messages as read
+        updated_count = Message.objects.filter(
+            conversation=conversation,
+            is_read=False
+        ).exclude(sender=user).update(is_read=True)
+
+        return Response({
+            'message': 'Messages marked as read',
+            'count': updated_count
         }, status=status.HTTP_200_OK)
