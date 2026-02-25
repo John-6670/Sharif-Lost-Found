@@ -27,7 +27,7 @@ class ConversationListView(generics.ListAPIView):
             last_message_time=Max('messages__created_at'),
             unread_count=Count(
                 'messages',
-                filter=Q(messages__is_read=False) & ~Q(messages__sender=user)
+                filter=Q(messages__is_read=False) & ~Q(messages__sender=user),
                 # Changed from Q(messages__sender__ne=user)
                 filter=Q(messages__is_read=False) & ~Q(messages__sender=user)  # Changed from Q(messages__sender__ne=user)
             )
