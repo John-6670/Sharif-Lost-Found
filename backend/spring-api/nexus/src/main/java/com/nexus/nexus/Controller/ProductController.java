@@ -75,6 +75,7 @@ public class ProductController {
             @RequestParam(required = false) Double radiusKm,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) com.nexus.nexus.Enumaration.TypeOfReport type,
+            @RequestParam(required = false) List<Long> categoryIds,
             @RequestParam(required = false)
             @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
             java.time.OffsetDateTime from,
@@ -85,7 +86,7 @@ public class ProductController {
             @RequestParam(defaultValue = "20") int size) {
 
         com.nexus.nexus.Service.ProductPage<ProductResponseDto> response =
-                productService.searchByLocation(lat, lon, radiusKm, name, type, from, to, page, size);
+                productService.searchByLocation(lat, lon, radiusKm, name, type, categoryIds, from, to, page, size);
         String message = response.items().isEmpty()
                 ? "No items found in the specified area"
                 : "Location search results fetched successfully";
@@ -103,6 +104,17 @@ public class ProductController {
                 .success(true)
                 .message("Counts fetched successfully")
                 .data(counts)
+                .build());
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<ResponseModel<List<com.nexus.nexus.Dto.CategoryDto>>> getAllCategories() {
+        List<com.nexus.nexus.Dto.CategoryDto> categories = productService.getAllCategories();
+        String message = categories.isEmpty() ? "No categories found" : "Categories fetched successfully";
+        return ResponseEntity.ok(ResponseModel.<List<com.nexus.nexus.Dto.CategoryDto>>builder()
+                .success(true)
+                .message(message)
+                .data(categories)
                 .build());
     }
 

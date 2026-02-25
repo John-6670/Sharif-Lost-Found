@@ -31,6 +31,9 @@ public class Category {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Column
+    private String color;
+
     @OneToMany(mappedBy = "category")
     private List<Item> items;
 }

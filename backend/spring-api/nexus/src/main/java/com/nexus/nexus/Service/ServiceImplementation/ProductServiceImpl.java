@@ -73,6 +73,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public com.nexus.nexus.Service.ProductPage<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
                                                                 String name, com.nexus.nexus.Enumaration.TypeOfReport type,
+                                                                java.util.List<Long> categoryIds,
                                                                 java.time.OffsetDateTime from, java.time.OffsetDateTime to,
                                                                 int page, int size) {
         boolean anyLocationProvided = centerLat != null || centerLon != null || radiusKm != null;
@@ -106,8 +107,19 @@ public class ProductServiceImpl implements ProductService {
                 ? null
                 : "%" + name.trim().toLowerCase() + "%";
 
+        java.util.List<Long> safeCategoryIds = null;
+        if (categoryIds != null) {
+            safeCategoryIds = categoryIds.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .distinct()
+                    .toList();
+            if (safeCategoryIds.isEmpty()) {
+                safeCategoryIds = null;
+            }
+        }
+
         org.springframework.data.domain.Page<Item> pageResult = reportRepository.searchByLocationAndFilters(
-                minLat, maxLat, minLon, maxLon, safeName, type, from, to,
+                minLat, maxLat, minLon, maxLon, safeName, type, safeCategoryIds, from, to,
                 org.springframework.data.domain.PageRequest.of(safePage, safeSize)
         );
         List<ProductResponseDto> items = productMapper.toDtoList(pageResult.getContent());
@@ -139,6 +151,18 @@ public class ProductServiceImpl implements ProductService {
                 .allReported(allReported)
                 .returned(returned)
                 .build();
+    }
+
+    @Override
+    public java.util.List<com.nexus.nexus.Dto.CategoryDto> getAllCategories() {
+        return categoryRepository.findAll().stream()
+                .sorted(java.util.Comparator.comparing(Category::getId, java.util.Comparator.nullsLast(Long::compareTo)))
+                .map(category -> com.nexus.nexus.Dto.CategoryDto.builder()
+                        .id(category.getId())
+                        .name(category.getName())
+                        .color(category.getColor())
+                        .build())
+                .toList();
     }
 
     @Override

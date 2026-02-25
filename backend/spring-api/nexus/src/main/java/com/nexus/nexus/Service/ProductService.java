@@ -24,8 +24,11 @@ public interface ProductService {
 
     com.nexus.nexus.Service.ProductPage<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
                                                                              String name, com.nexus.nexus.Enumaration.TypeOfReport type,
+                                                                             java.util.List<Long> categoryIds,
                                                                              java.time.OffsetDateTime from, java.time.OffsetDateTime to,
                                                                              int page, int size);
 
     com.nexus.nexus.Dto.ItemCountsDto getItemCounts(java.time.ZoneId zoneId);
+
+    java.util.List<com.nexus.nexus.Dto.CategoryDto> getAllCategories();
 }
