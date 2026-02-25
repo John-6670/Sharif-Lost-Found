@@ -17,12 +17,19 @@ public interface ReportRepository extends JpaRepository<Item, Long> {
 
     List<Item> findAllByCategory_Id(Long categoryId);
 
+    List<Item> findAllByStatusNot(com.nexus.nexus.Enumaration.Status status);
+
+    List<Item> findAllByCategory_IdAndStatusNot(Long categoryId, com.nexus.nexus.Enumaration.Status status);
+
+    Page<Item> findAllByStatusNot(com.nexus.nexus.Enumaration.Status status, Pageable pageable);
+
     @Query("""
             SELECT i FROM Item i
             WHERE i.latitude BETWEEN COALESCE(:minLat, i.latitude) AND COALESCE(:maxLat, i.latitude)
               AND i.longitude BETWEEN COALESCE(:minLon, i.longitude) AND COALESCE(:maxLon, i.longitude)
               AND (COALESCE(:name, '') = '' OR LOWER(i.name) LIKE :name)
               AND i.type = COALESCE(:type, i.type)
+              AND i.status <> :excludedStatus
               AND (:categoryIds IS NULL OR i.category.id IN :categoryIds)
               AND i.createdAt >= COALESCE(:from, i.createdAt)
               AND i.createdAt <= COALESCE(:to, i.createdAt)
@@ -34,6 +41,7 @@ public interface ReportRepository extends JpaRepository<Item, Long> {
             @Param("maxLon") java.math.BigDecimal maxLon,
             @Param("name") String name,
             @Param("type") com.nexus.nexus.Enumaration.TypeOfReport type,
+            @Param("excludedStatus") com.nexus.nexus.Enumaration.Status excludedStatus,
             @Param("categoryIds") java.util.List<Long> categoryIds,
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to
@@ -47,6 +55,7 @@ public interface ReportRepository extends JpaRepository<Item, Long> {
               AND i.longitude BETWEEN COALESCE(:minLon, i.longitude) AND COALESCE(:maxLon, i.longitude)
               AND (COALESCE(:name, '') = '' OR LOWER(i.name) LIKE :name)
               AND i.type = COALESCE(:type, i.type)
+              AND i.status <> :excludedStatus
               AND (:categoryIds IS NULL OR i.category.id IN :categoryIds)
               AND i.createdAt >= COALESCE(:from, i.createdAt)
               AND i.createdAt <= COALESCE(:to, i.createdAt)
@@ -58,6 +67,7 @@ public interface ReportRepository extends JpaRepository<Item, Long> {
             @Param("maxLon") java.math.BigDecimal maxLon,
             @Param("name") String name,
             @Param("type") com.nexus.nexus.Enumaration.TypeOfReport type,
+            @Param("excludedStatus") com.nexus.nexus.Enumaration.Status excludedStatus,
             @Param("categoryIds") java.util.List<Long> categoryIds,
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to,

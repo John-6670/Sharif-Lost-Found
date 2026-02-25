@@ -39,7 +39,10 @@ public class ProductServiceImpl implements ProductService {
         int safeSize = Math.max(1, size);
 
         org.springframework.data.domain.Page<Item> pageResult =
-                reportRepository.findAll(org.springframework.data.domain.PageRequest.of(safePage, safeSize));
+                reportRepository.findAllByStatusNot(
+                        com.nexus.nexus.Enumaration.Status.REPORTED,
+                        org.springframework.data.domain.PageRequest.of(safePage, safeSize)
+                );
 
         List<com.nexus.nexus.Dto.ProductListItemDto> items = productMapper.toListItemDtoList(pageResult.getContent());
         return new com.nexus.nexus.Service.ProductPage<>(
@@ -56,18 +59,28 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDto getProductById(Long productId) {
         Item item = reportRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        if (item.getStatus() == com.nexus.nexus.Enumaration.Status.REPORTED) {
+            throw new IllegalArgumentException("Product not found");
+        }
         return productMapper.toDto(item);
     }
 
     @Override
     public List<ProductResponseDto> searchProducts(String keyword) {
         if (keyword == null || keyword.isBlank()) {
-            return productMapper.toDtoList(reportRepository.findAll());
+            return productMapper.toDtoList(
+                    reportRepository.findAllByStatusNot(com.nexus.nexus.Enumaration.Status.REPORTED)
+            );
         }
 
         try {
             Long categoryId = Long.parseLong(keyword.trim());
-            return productMapper.toDtoList(reportRepository.findAllByCategory_Id(categoryId));
+            return productMapper.toDtoList(
+                    reportRepository.findAllByCategory_IdAndStatusNot(
+                            categoryId,
+                            com.nexus.nexus.Enumaration.Status.REPORTED
+                    )
+            );
         } catch (NumberFormatException e) {
             return List.of();
         }
@@ -122,7 +135,9 @@ public class ProductServiceImpl implements ProductService {
         }
 
         org.springframework.data.domain.Page<Item> pageResult = reportRepository.searchByLocationAndFilters(
-                minLat, maxLat, minLon, maxLon, safeName, type, safeCategoryIds, from, to,
+                minLat, maxLat, minLon, maxLon, safeName, type,
+                com.nexus.nexus.Enumaration.Status.REPORTED,
+                safeCategoryIds, from, to,
                 org.springframework.data.domain.PageRequest.of(safePage, safeSize)
         );
         List<ProductResponseDto> items = productMapper.toDtoList(pageResult.getContent());
@@ -300,7 +315,11 @@ public class ProductServiceImpl implements ProductService {
                 .build();
         itemReportRepository.save(report);
 
-        item.setReportedCounts(item.getReportedCounts() + 1);
+        long reportCount = itemReportRepository.countByItemId(itemId);
+        item.setReportedCounts((int) reportCount);
+        if (reportCount >= 3) {
+            item.setStatus(com.nexus.nexus.Enumaration.Status.REPORTED);
+        }
         item.setUpdatedAt(OffsetDateTime.now());
         reportRepository.save(item);
     }

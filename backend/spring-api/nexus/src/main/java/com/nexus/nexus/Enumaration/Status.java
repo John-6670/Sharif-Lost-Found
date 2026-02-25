@@ -7,7 +7,8 @@ public enum Status {
     OPEN,
     MATCHED,
     DELIVERED,
-    ACTIVE;
+    ACTIVE,
+    REPORTED;
 
     @JsonCreator
     public static Status fromString(String value) {
