@@ -39,8 +39,8 @@ public class ProductServiceImpl implements ProductService {
         int safeSize = Math.max(1, size);
 
         org.springframework.data.domain.Page<Item> pageResult =
-                reportRepository.findAllByStatusNot(
-                        com.nexus.nexus.Enumaration.Status.REPORTED,
+                reportRepository.findAllByStatus(
+                        com.nexus.nexus.Enumaration.Status.ACTIVE,
                         org.springframework.data.domain.PageRequest.of(safePage, safeSize)
                 );
 
@@ -59,7 +59,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDto getProductById(Long productId) {
         Item item = reportRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
-        if (item.getStatus() == com.nexus.nexus.Enumaration.Status.REPORTED) {
+        if (item.getStatus() != com.nexus.nexus.Enumaration.Status.ACTIVE) {
             throw new IllegalArgumentException("Product not found");
         }
         return productMapper.toDto(item);
@@ -69,16 +69,16 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductResponseDto> searchProducts(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return productMapper.toDtoList(
-                    reportRepository.findAllByStatusNot(com.nexus.nexus.Enumaration.Status.REPORTED)
+                    reportRepository.findAllByStatus(com.nexus.nexus.Enumaration.Status.ACTIVE)
             );
         }
 
         try {
             Long categoryId = Long.parseLong(keyword.trim());
             return productMapper.toDtoList(
-                    reportRepository.findAllByCategory_IdAndStatusNot(
+                    reportRepository.findAllByCategory_IdAndStatus(
                             categoryId,
-                            com.nexus.nexus.Enumaration.Status.REPORTED
+                            com.nexus.nexus.Enumaration.Status.ACTIVE
                     )
             );
         } catch (NumberFormatException e) {
@@ -136,7 +136,7 @@ public class ProductServiceImpl implements ProductService {
 
         org.springframework.data.domain.Page<Item> pageResult = reportRepository.searchByLocationAndFilters(
                 minLat, maxLat, minLon, maxLon, safeName, type,
-                com.nexus.nexus.Enumaration.Status.REPORTED,
+                com.nexus.nexus.Enumaration.Status.ACTIVE,
                 safeCategoryIds, from, to,
                 org.springframework.data.domain.PageRequest.of(safePage, safeSize)
         );
