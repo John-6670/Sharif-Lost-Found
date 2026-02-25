@@ -56,6 +56,7 @@ public class SecurityConfig {
                                 "/api/items",
                                 "/api/product",
                                 "/api/product/search",
+                                "/api/items/search/location",
                                 "/api/product/*/comments").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()

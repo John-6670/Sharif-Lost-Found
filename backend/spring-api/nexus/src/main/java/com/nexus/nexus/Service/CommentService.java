@@ -4,7 +4,6 @@ import com.nexus.nexus.Dto.CommentRequestDto;
 import com.nexus.nexus.Dto.CommentResponseDto;
 import com.nexus.nexus.Security.JwtPrincipal;
 
-import java.util.List;
 
 public interface CommentService {
 
