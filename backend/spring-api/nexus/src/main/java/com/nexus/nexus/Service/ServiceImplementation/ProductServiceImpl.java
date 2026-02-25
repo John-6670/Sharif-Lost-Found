@@ -291,6 +291,7 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
+        
         foundItem = reportRepository.save(foundItem);
         return productMapper.toDto(foundItem);
     }
