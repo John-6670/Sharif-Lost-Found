@@ -28,15 +28,19 @@ class ProductControllerTest {
 
     @Test
     void getAllProducts_returnsList() {
-        when(productService.findAllProducts()).thenReturn(List.of(
-                ProductResponseDto.builder().id(1L).name("test").build()
-        ));
+        com.nexus.nexus.Service.ProductPage<com.nexus.nexus.Dto.ProductListItemDto> page =
+                new com.nexus.nexus.Service.ProductPage<>(
+                        List.of(com.nexus.nexus.Dto.ProductListItemDto.builder().id(1L).name("test").build()),
+                        0, 5, 1, 1, false
+                );
+        when(productService.findAllProducts(0, 5)).thenReturn(page);
 
-        ResponseEntity<List<ProductResponseDto>> response = controller.getAllProducts();
+        ResponseEntity<com.nexus.nexus.Models.ResponseModel<com.nexus.nexus.Service.ProductPage<com.nexus.nexus.Dto.ProductListItemDto>>> response =
+                controller.getAllProducts(0, 5);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().get(0).getId()).isEqualTo(1L);
+        assertThat(response.getBody().getData().items()).hasSize(1);
+        assertThat(response.getBody().getData().items().get(0).getId()).isEqualTo(1L);
     }
 
     @Test

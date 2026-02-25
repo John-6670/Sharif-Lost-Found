@@ -1,5 +1,6 @@
 package com.nexus.nexus.Mapper;
 
+import com.nexus.nexus.Dto.ProductListItemDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
 import com.nexus.nexus.Dto.ReporterDto;
 import com.nexus.nexus.Entity.Item;
@@ -45,6 +46,40 @@ public class ProductMapperImplManual implements ProductMapper {
         List<ProductResponseDto> result = new ArrayList<>(items.size());
         for (Item item : items) {
             result.add(toDto(item));
+        }
+        return result;
+    }
+
+    @Override
+    public ProductListItemDto toListItemDto(Item item) {
+        if (item == null) {
+            return null;
+        }
+
+        return ProductListItemDto.builder()
+                .id(item.getId())
+                .type(item.getType() != null ? item.getType().name().toLowerCase() : null)
+                .name(item.getName())
+                .description(item.getDescription())
+                .categoryId(item.getCategory() != null ? item.getCategory().getId() : null)
+                .categoryName(item.getCategory() != null ? item.getCategory().getName() : null)
+                .latitude(item.getLatitude() != null ? item.getLatitude().toPlainString() : null)
+                .longitude(item.getLongitude() != null ? item.getLongitude().toPlainString() : null)
+                .status(item.getStatus() != null ? item.getStatus().name().toLowerCase() : null)
+                .reporter(toReporterDto(item.getReporter()))
+                .createdAt(item.getCreatedAt())
+                .updatedAt(item.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    public List<ProductListItemDto> toListItemDtoList(List<Item> items) {
+        if (items == null) {
+            return List.of();
+        }
+        List<ProductListItemDto> result = new ArrayList<>(items.size());
+        for (Item item : items) {
+            result.add(toListItemDto(item));
         }
         return result;
     }

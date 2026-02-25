@@ -1,7 +1,9 @@
 package com.nexus.nexus.Controller;
 
+import com.nexus.nexus.Dto.ProductListItemDto;
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
+import com.nexus.nexus.Dto.ItemCountsDto;
 import com.nexus.nexus.Models.ResponseModel;
 import com.nexus.nexus.Security.JwtPrincipal;
 import com.nexus.nexus.Service.ProductService;
@@ -15,13 +17,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
+
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.time.ZoneId;
 
 @RestController
 @RequestMapping("/api/items")
@@ -32,9 +35,16 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
-        List<ProductResponseDto> response = productService.findAllProducts();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ResponseModel<com.nexus.nexus.Service.ProductPage<ProductListItemDto>>> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        com.nexus.nexus.Service.ProductPage<ProductListItemDto> response = productService.findAllProducts(page, size);
+        String message = response.items().isEmpty() ? "No items found" : "Items fetched successfully";
+        return ResponseEntity.ok(ResponseModel.<com.nexus.nexus.Service.ProductPage<ProductListItemDto>>builder()
+                .success(true)
+                .message(message)
+                .data(response)
+                .build());
     }
 
     @GetMapping("/{productId}")
@@ -59,7 +69,7 @@ public class ProductController {
     }
 
     @GetMapping("/search/location")
-    public ResponseEntity<ResponseModel<List<ProductResponseDto>>> searchByLocation(
+    public ResponseEntity<ResponseModel<com.nexus.nexus.Service.ProductPage<ProductResponseDto>>> searchByLocation(
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lon,
             @RequestParam(required = false) Double radiusKm,
@@ -70,16 +80,29 @@ public class ProductController {
             java.time.OffsetDateTime from,
             @RequestParam(required = false)
             @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
-            java.time.OffsetDateTime to) {
+            java.time.OffsetDateTime to,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
-        List<ProductResponseDto> response = productService.searchByLocation(lat, lon, radiusKm, name, type, from, to);
-        String message = response.isEmpty()
+        com.nexus.nexus.Service.ProductPage<ProductResponseDto> response =
+                productService.searchByLocation(lat, lon, radiusKm, name, type, from, to, page, size);
+        String message = response.items().isEmpty()
                 ? "No items found in the specified area"
                 : "Location search results fetched successfully";
-        return ResponseEntity.ok(ResponseModel.<List<ProductResponseDto>>builder()
+        return ResponseEntity.ok(ResponseModel.<com.nexus.nexus.Service.ProductPage<ProductResponseDto>>builder()
                 .success(true)
                 .message(message)
                 .data(response)
+                .build());
+    }
+
+    @GetMapping("/counts")
+    public ResponseEntity<ResponseModel<ItemCountsDto>> getItemCounts() {
+        ItemCountsDto counts = productService.getItemCounts(ZoneId.of("Asia/Tehran"));
+        return ResponseEntity.ok(ResponseModel.<ItemCountsDto>builder()
+                .success(true)
+                .message("Counts fetched successfully")
+                .data(counts)
                 .build());
     }
 

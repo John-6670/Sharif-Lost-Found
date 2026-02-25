@@ -9,6 +9,8 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface ReportRepository extends JpaRepository<Item, Long> {
@@ -34,4 +36,31 @@ public interface ReportRepository extends JpaRepository<Item, Long> {
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to
     );
+
+    Page<Item> findAll(Pageable pageable);
+
+    @Query("""
+            SELECT i FROM Item i
+            WHERE i.latitude BETWEEN COALESCE(:minLat, i.latitude) AND COALESCE(:maxLat, i.latitude)
+              AND i.longitude BETWEEN COALESCE(:minLon, i.longitude) AND COALESCE(:maxLon, i.longitude)
+              AND (COALESCE(:name, '') = '' OR LOWER(i.name) LIKE :name)
+              AND i.type = COALESCE(:type, i.type)
+              AND i.createdAt >= COALESCE(:from, i.createdAt)
+              AND i.createdAt <= COALESCE(:to, i.createdAt)
+            """)
+    Page<Item> searchByLocationAndFilters(
+            @Param("minLat") java.math.BigDecimal minLat,
+            @Param("maxLat") java.math.BigDecimal maxLat,
+            @Param("minLon") java.math.BigDecimal minLon,
+            @Param("maxLon") java.math.BigDecimal maxLon,
+            @Param("name") String name,
+            @Param("type") com.nexus.nexus.Enumaration.TypeOfReport type,
+            @Param("from") OffsetDateTime from,
+            @Param("to") OffsetDateTime to,
+            Pageable pageable
+    );
+
+    long countByCreatedAtBetween(OffsetDateTime start, OffsetDateTime end);
+
+    long countByStatus(com.nexus.nexus.Enumaration.Status status);
 }

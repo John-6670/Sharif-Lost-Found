@@ -53,10 +53,11 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/items",
-                                "/api/items",
+                                "/api/items/**",
                                 "/api/product",
                                 "/api/product/search",
                                 "/api/items/search/location",
+                                "/api/items/counts",
                                 "/api/product/*/comments").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()

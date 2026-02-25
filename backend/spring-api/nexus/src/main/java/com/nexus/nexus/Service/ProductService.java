@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface ProductService {
 
-    List<ProductResponseDto> findAllProducts();
+    com.nexus.nexus.Service.ProductPage<com.nexus.nexus.Dto.ProductListItemDto> findAllProducts(int page, int size);
 
     ProductResponseDto getProductById(Long productId);
 
@@ -22,7 +22,10 @@ public interface ProductService {
 
     List<ProductResponseDto> searchProducts(String keyword);
 
-    List<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
-                                              String name, com.nexus.nexus.Enumaration.TypeOfReport type,
-                                              java.time.OffsetDateTime from, java.time.OffsetDateTime to);
+    com.nexus.nexus.Service.ProductPage<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
+                                                                             String name, com.nexus.nexus.Enumaration.TypeOfReport type,
+                                                                             java.time.OffsetDateTime from, java.time.OffsetDateTime to,
+                                                                             int page, int size);
+
+    com.nexus.nexus.Dto.ItemCountsDto getItemCounts(java.time.ZoneId zoneId);
 }

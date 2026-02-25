@@ -79,15 +79,18 @@ class ProductServiceImplTest {
         Item item = Item.builder().id(10L).build();
         ProductResponseDto dto = ProductResponseDto.builder().id(10L).build();
 
-        when(reportRepository.findAll()).thenReturn(List.of(item));
-        when(productMapper.toDtoList(List.of(item))).thenReturn(List.of(dto));
+        when(reportRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(item)));
+        when(productMapper.toListItemDtoList(List.of(item)))
+                .thenReturn(List.of(com.nexus.nexus.Dto.ProductListItemDto.builder().id(10L).build()));
 
-        List<ProductResponseDto> result = service.findAllProducts();
+        com.nexus.nexus.Service.ProductPage<com.nexus.nexus.Dto.ProductListItemDto> result =
+                service.findAllProducts(0, 10);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).getId()).isEqualTo(10L);
-        verify(reportRepository).findAll();
-        verify(productMapper).toDtoList(List.of(item));
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().get(0).getId()).isEqualTo(10L);
+        verify(reportRepository).findAll(any(org.springframework.data.domain.Pageable.class));
+        verify(productMapper).toListItemDtoList(List.of(item));
     }
 
     @Test

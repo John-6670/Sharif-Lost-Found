@@ -31,9 +31,22 @@ public class ProductServiceImpl implements ProductService {
     private final ProductMapper productMapper;
 
     @Override
-    public List<ProductResponseDto> findAllProducts() {
-        List<Item> items = reportRepository.findAll();
-        return productMapper.toDtoList(items);
+    public com.nexus.nexus.Service.ProductPage<com.nexus.nexus.Dto.ProductListItemDto> findAllProducts(int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, size);
+
+        org.springframework.data.domain.Page<Item> pageResult =
+                reportRepository.findAll(org.springframework.data.domain.PageRequest.of(safePage, safeSize));
+
+        List<com.nexus.nexus.Dto.ProductListItemDto> items = productMapper.toListItemDtoList(pageResult.getContent());
+        return new com.nexus.nexus.Service.ProductPage<>(
+                items,
+                safePage,
+                safeSize,
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages(),
+                pageResult.hasNext()
+        );
     }
 
     @Override
@@ -46,7 +59,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<ProductResponseDto> searchProducts(String keyword) {
         if (keyword == null || keyword.isBlank()) {
-            return findAllProducts();
+            return productMapper.toDtoList(reportRepository.findAll());
         }
 
         try {
@@ -58,14 +71,18 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
-                                                     String name, com.nexus.nexus.Enumaration.TypeOfReport type,
-                                                     java.time.OffsetDateTime from, java.time.OffsetDateTime to) {
+    public com.nexus.nexus.Service.ProductPage<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
+                                                                String name, com.nexus.nexus.Enumaration.TypeOfReport type,
+                                                                java.time.OffsetDateTime from, java.time.OffsetDateTime to,
+                                                                int page, int size) {
         boolean anyLocationProvided = centerLat != null || centerLon != null || radiusKm != null;
         boolean allLocationProvided = centerLat != null && centerLon != null && radiusKm != null;
         if (anyLocationProvided && !allLocationProvided) {
             throw new IllegalArgumentException("lat, lon, and radiusKm must be provided together");
         }
+
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, size);
 
         java.math.BigDecimal minLat = null;
         java.math.BigDecimal maxLat = null;
@@ -89,10 +106,39 @@ public class ProductServiceImpl implements ProductService {
                 ? null
                 : "%" + name.trim().toLowerCase() + "%";
 
-        List<Item> items = reportRepository.searchByLocationAndFilters(
-                minLat, maxLat, minLon, maxLon, safeName, type, from, to
+        org.springframework.data.domain.Page<Item> pageResult = reportRepository.searchByLocationAndFilters(
+                minLat, maxLat, minLon, maxLon, safeName, type, from, to,
+                org.springframework.data.domain.PageRequest.of(safePage, safeSize)
         );
-        return productMapper.toDtoList(items);
+        List<ProductResponseDto> items = productMapper.toDtoList(pageResult.getContent());
+        return new com.nexus.nexus.Service.ProductPage<>(
+                items,
+                safePage,
+                safeSize,
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages(),
+                pageResult.hasNext()
+        );
+    }
+
+    @Override
+    public com.nexus.nexus.Dto.ItemCountsDto getItemCounts(java.time.ZoneId zoneId) {
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(zoneId);
+        java.time.ZonedDateTime startOfDay = now.toLocalDate().atStartOfDay(zoneId);
+        java.time.ZonedDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
+
+        java.time.OffsetDateTime start = startOfDay.toOffsetDateTime();
+        java.time.OffsetDateTime end = endOfDay.toOffsetDateTime();
+
+        long todayReported = reportRepository.countByCreatedAtBetween(start, end);
+        long allReported = reportRepository.count();
+        long returned = reportRepository.countByStatus(com.nexus.nexus.Enumaration.Status.DELIVERED);
+
+        return com.nexus.nexus.Dto.ItemCountsDto.builder()
+                .todayReported(todayReported)
+                .allReported(allReported)
+                .returned(returned)
+                .build();
     }
 
     @Override
