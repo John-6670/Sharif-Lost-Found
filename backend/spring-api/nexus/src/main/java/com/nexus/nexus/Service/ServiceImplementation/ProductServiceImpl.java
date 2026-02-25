@@ -358,8 +358,20 @@ public class ProductServiceImpl implements ProductService {
             return categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new IllegalArgumentException("Category not found"));
         }
-        return categoryRepository.findByNameIgnoreCase(request.getCategoryName().trim())
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        String raw = request.getCategoryName();
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException("Category is required");
+        }
+
+        String trimmed = raw.trim();
+        try {
+            Long categoryId = Long.parseLong(trimmed);
+            return categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        } catch (NumberFormatException ignore) {
+            return categoryRepository.findByNameIgnoreCase(trimmed)
+                    .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+        }
     }
 
     private byte[] parseImageBase64(String image) {
