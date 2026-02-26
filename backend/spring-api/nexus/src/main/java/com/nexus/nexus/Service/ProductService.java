@@ -1,14 +1,21 @@
 package com.nexus.nexus.Service;
 
+import com.nexus.nexus.Dto.CategoryDto;
+import com.nexus.nexus.Dto.ItemCountsDto;
+import com.nexus.nexus.Dto.ProductListItemDto;
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
+import com.nexus.nexus.Dto.UserItemCountsDto;
+import com.nexus.nexus.Enumaration.TypeOfReport;
 import com.nexus.nexus.Security.JwtPrincipal;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 public interface ProductService {
 
-    com.nexus.nexus.Service.ProductPage<com.nexus.nexus.Dto.ProductListItemDto> findAllProducts(int page, int size);
+    ProductPage<ProductListItemDto> findAllProducts(int page, int size);
 
     ProductResponseDto getProductById(Long productId);
 
@@ -22,17 +29,17 @@ public interface ProductService {
 
     List<ProductResponseDto> searchProducts(String keyword);
 
-    com.nexus.nexus.Service.ProductPage<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
-                                                                             String name, com.nexus.nexus.Enumaration.TypeOfReport type,
-                                                                             java.util.List<Long> categoryIds,
-                                                                             java.time.OffsetDateTime from, java.time.OffsetDateTime to,
-                                                                             int page, int size);
+    ProductPage<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
+                                                     String name, TypeOfReport type,
+                                                     List<Long> categoryIds,
+                                                     OffsetDateTime from, OffsetDateTime to,
+                                                     int page, int size);
 
-    com.nexus.nexus.Dto.ItemCountsDto getItemCounts(java.time.ZoneId zoneId);
+    ItemCountsDto getItemCounts(ZoneId zoneId);
 
-    com.nexus.nexus.Dto.UserItemCountsDto getUserItemCounts(JwtPrincipal principal);
+    UserItemCountsDto getUserItemCounts(JwtPrincipal principal);
 
-    com.nexus.nexus.Dto.UserItemCountsDto getUserItemCounts(Long userId);
+    UserItemCountsDto getUserItemCounts(Long userId);
 
-    java.util.List<com.nexus.nexus.Dto.CategoryDto> getAllCategories();
+    List<CategoryDto> getAllCategories();
 }

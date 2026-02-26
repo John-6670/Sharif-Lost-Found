@@ -1,17 +1,22 @@
 package com.nexus.nexus.Controller;
 
+import com.nexus.nexus.Dto.ItemCountsDto;
 import com.nexus.nexus.Dto.ProductListItemDto;
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
-import com.nexus.nexus.Dto.ItemCountsDto;
+import com.nexus.nexus.Dto.UserItemCountsDto;
+import com.nexus.nexus.Dto.CategoryDto;
 import com.nexus.nexus.Models.ResponseModel;
 import com.nexus.nexus.Security.JwtPrincipal;
+import com.nexus.nexus.Service.ProductPage;
 import com.nexus.nexus.Service.ProductService;
+import com.nexus.nexus.Enumaration.TypeOfReport;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,8 +28,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/items")
@@ -35,12 +41,12 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public ResponseEntity<ResponseModel<com.nexus.nexus.Service.ProductPage<ProductListItemDto>>> getAllProducts(
+    public ResponseEntity<ResponseModel<ProductPage<ProductListItemDto>>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "5") int size) {
-        com.nexus.nexus.Service.ProductPage<ProductListItemDto> response = productService.findAllProducts(page, size);
+        ProductPage<ProductListItemDto> response = productService.findAllProducts(page, size);
         String message = response.items().isEmpty() ? "No items found" : "Items fetched successfully";
-        return ResponseEntity.ok(ResponseModel.<com.nexus.nexus.Service.ProductPage<ProductListItemDto>>builder()
+        return ResponseEntity.ok(ResponseModel.<ProductPage<ProductListItemDto>>builder()
                 .success(true)
                 .message(message)
                 .data(response)
@@ -69,28 +75,28 @@ public class ProductController {
     }
 
     @GetMapping("/search/location")
-    public ResponseEntity<ResponseModel<com.nexus.nexus.Service.ProductPage<ProductResponseDto>>> searchByLocation(
+    public ResponseEntity<ResponseModel<ProductPage<ProductResponseDto>>> searchByLocation(
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lon,
             @RequestParam(required = false) Double radiusKm,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) com.nexus.nexus.Enumaration.TypeOfReport type,
+            @RequestParam(required = false) TypeOfReport type,
             @RequestParam(required = false) List<Long> categoryIds,
             @RequestParam(required = false)
-            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
-            java.time.OffsetDateTime from,
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            OffsetDateTime from,
             @RequestParam(required = false)
-            @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME)
-            java.time.OffsetDateTime to,
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            OffsetDateTime to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        com.nexus.nexus.Service.ProductPage<ProductResponseDto> response =
+        ProductPage<ProductResponseDto> response =
                 productService.searchByLocation(lat, lon, radiusKm, name, type, categoryIds, from, to, page, size);
         String message = response.items().isEmpty()
                 ? "No items found in the specified area"
                 : "Location search results fetched successfully";
-        return ResponseEntity.ok(ResponseModel.<com.nexus.nexus.Service.ProductPage<ProductResponseDto>>builder()
+        return ResponseEntity.ok(ResponseModel.<ProductPage<ProductResponseDto>>builder()
                 .success(true)
                 .message(message)
                 .data(response)
@@ -108,10 +114,10 @@ public class ProductController {
     }
 
     @GetMapping("/counts/me")
-    public ResponseEntity<ResponseModel<com.nexus.nexus.Dto.UserItemCountsDto>> getMyItemCounts() {
+    public ResponseEntity<ResponseModel<UserItemCountsDto>> getMyItemCounts() {
         JwtPrincipal principal = getJwtPrincipal();
-        com.nexus.nexus.Dto.UserItemCountsDto counts = productService.getUserItemCounts(principal);
-        return ResponseEntity.ok(ResponseModel.<com.nexus.nexus.Dto.UserItemCountsDto>builder()
+        UserItemCountsDto counts = productService.getUserItemCounts(principal);
+        return ResponseEntity.ok(ResponseModel.<UserItemCountsDto>builder()
                 .success(true)
                 .message("User counts fetched successfully")
                 .data(counts)
@@ -119,12 +125,12 @@ public class ProductController {
     }
 
     @GetMapping("/counts/{userId}")
-    public ResponseEntity<ResponseModel<com.nexus.nexus.Dto.UserItemCountsDto>> getPublicProfileItems(
+    public ResponseEntity<ResponseModel<UserItemCountsDto>> getPublicProfileItems(
         @PathVariable Long userId
     ) {
         JwtPrincipal principal = getJwtPrincipal();
-        com.nexus.nexus.Dto.UserItemCountsDto counts = productService.getUserItemCounts(principal);
-        return ResponseEntity.ok(ResponseModel.<com.nexus.nexus.Dto.UserItemCountsDto>builder()
+        UserItemCountsDto counts = productService.getUserItemCounts(principal);
+        return ResponseEntity.ok(ResponseModel.<UserItemCountsDto>builder()
                 .success(true)
                 .message("User counts fetched successfully")
                 .data(counts)
@@ -132,10 +138,10 @@ public class ProductController {
     }
 
     @GetMapping("/categories")
-    public ResponseEntity<ResponseModel<List<com.nexus.nexus.Dto.CategoryDto>>> getAllCategories() {
-        List<com.nexus.nexus.Dto.CategoryDto> categories = productService.getAllCategories();
+    public ResponseEntity<ResponseModel<List<CategoryDto>>> getAllCategories() {
+        List<CategoryDto> categories = productService.getAllCategories();
         String message = categories.isEmpty() ? "No categories found" : "Categories fetched successfully";
-        return ResponseEntity.ok(ResponseModel.<List<com.nexus.nexus.Dto.CategoryDto>>builder()
+        return ResponseEntity.ok(ResponseModel.<List<CategoryDto>>builder()
                 .success(true)
                 .message(message)
                 .data(categories)

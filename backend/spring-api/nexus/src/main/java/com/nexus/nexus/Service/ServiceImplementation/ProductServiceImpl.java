@@ -1,25 +1,38 @@
 package com.nexus.nexus.Service.ServiceImplementation;
 
+import com.nexus.nexus.Dto.CategoryDto;
+import com.nexus.nexus.Dto.ItemCountsDto;
+import com.nexus.nexus.Dto.ProductListItemDto;
 import com.nexus.nexus.Dto.ProductRequestDto;
 import com.nexus.nexus.Dto.ProductResponseDto;
+import com.nexus.nexus.Dto.UserItemCountsDto;
 import com.nexus.nexus.Entity.Category;
 import com.nexus.nexus.Entity.Item;
 import com.nexus.nexus.Entity.ItemReport;
 import com.nexus.nexus.Entity.User;
+import com.nexus.nexus.Enumaration.Status;
+import com.nexus.nexus.Enumaration.TypeOfReport;
 import com.nexus.nexus.Mapper.ProductMapper;
 import com.nexus.nexus.Repository.CategoryRepository;
 import com.nexus.nexus.Repository.ItemReportRepository;
 import com.nexus.nexus.Repository.ReportRepository;
 import com.nexus.nexus.Repository.UserRepository;
 import com.nexus.nexus.Security.JwtPrincipal;
+import com.nexus.nexus.Service.ProductPage;
 import com.nexus.nexus.Service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Base64;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,18 +47,18 @@ public class ProductServiceImpl implements ProductService {
     private final ProductMapper productMapper;
 
     @Override
-    public com.nexus.nexus.Service.ProductPage<com.nexus.nexus.Dto.ProductListItemDto> findAllProducts(int page, int size) {
+    public ProductPage<ProductListItemDto> findAllProducts(int page, int size) {
         int safePage = Math.max(0, page);
         int safeSize = Math.max(1, size);
 
-        org.springframework.data.domain.Page<Item> pageResult =
+        Page<Item> pageResult =
                 reportRepository.findAllByStatus(
-                        com.nexus.nexus.Enumaration.Status.ACTIVE,
-                        org.springframework.data.domain.PageRequest.of(safePage, safeSize)
+                        Status.ACTIVE,
+                        PageRequest.of(safePage, safeSize)
                 );
 
-        List<com.nexus.nexus.Dto.ProductListItemDto> items = productMapper.toListItemDtoList(pageResult.getContent());
-        return new com.nexus.nexus.Service.ProductPage<>(
+        List<ProductListItemDto> items = productMapper.toListItemDtoList(pageResult.getContent());
+        return new ProductPage<>(
                 items,
                 safePage,
                 safeSize,
@@ -59,7 +72,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDto getProductById(Long productId) {
         Item item = reportRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
-        if (item.getStatus() != com.nexus.nexus.Enumaration.Status.ACTIVE) {
+        if (item.getStatus() != Status.ACTIVE) {
             throw new IllegalArgumentException("Product not found");
         }
         return productMapper.toDto(item);
@@ -69,7 +82,7 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductResponseDto> searchProducts(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return productMapper.toDtoList(
-                    reportRepository.findAllByStatus(com.nexus.nexus.Enumaration.Status.ACTIVE)
+                    reportRepository.findAllByStatus(Status.ACTIVE)
             );
         }
 
@@ -78,7 +91,7 @@ public class ProductServiceImpl implements ProductService {
             return productMapper.toDtoList(
                     reportRepository.findAllByCategory_IdAndStatus(
                             categoryId,
-                            com.nexus.nexus.Enumaration.Status.ACTIVE
+                            Status.ACTIVE
                     )
             );
         } catch (NumberFormatException e) {
@@ -87,11 +100,11 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public com.nexus.nexus.Service.ProductPage<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
-                                                                String name, com.nexus.nexus.Enumaration.TypeOfReport type,
-                                                                java.util.List<Long> categoryIds,
-                                                                java.time.OffsetDateTime from, java.time.OffsetDateTime to,
-                                                                int page, int size) {
+    public ProductPage<ProductResponseDto> searchByLocation(Double centerLat, Double centerLon, Double radiusKm,
+                                                           String name, TypeOfReport type,
+                                                           List<Long> categoryIds,
+                                                           OffsetDateTime from, OffsetDateTime to,
+                                                           int page, int size) {
         boolean anyLocationProvided = centerLat != null || centerLon != null || radiusKm != null;
         boolean allLocationProvided = centerLat != null && centerLon != null && radiusKm != null;
         if (anyLocationProvided && !allLocationProvided) {
@@ -123,10 +136,10 @@ public class ProductServiceImpl implements ProductService {
                 ? null
                 : "%" + name.trim().toLowerCase() + "%";
 
-        java.util.List<Long> safeCategoryIds = null;
+        List<Long> safeCategoryIds = null;
         if (categoryIds != null) {
             safeCategoryIds = categoryIds.stream()
-                    .filter(java.util.Objects::nonNull)
+                    .filter(Objects::nonNull)
                     .distinct()
                     .toList();
             if (safeCategoryIds.isEmpty()) {
@@ -134,14 +147,14 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        org.springframework.data.domain.Page<Item> pageResult = reportRepository.searchByLocationAndFilters(
+        Page<Item> pageResult = reportRepository.searchByLocationAndFilters(
                 minLat, maxLat, minLon, maxLon, safeName, type,
-                com.nexus.nexus.Enumaration.Status.ACTIVE,
+                Status.ACTIVE,
                 safeCategoryIds, from, to,
-                org.springframework.data.domain.PageRequest.of(safePage, safeSize)
+                PageRequest.of(safePage, safeSize)
         );
         List<ProductResponseDto> items = productMapper.toDtoList(pageResult.getContent());
-        return new com.nexus.nexus.Service.ProductPage<>(
+        return new ProductPage<>(
                 items,
                 safePage,
                 safeSize,
@@ -152,19 +165,19 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public com.nexus.nexus.Dto.ItemCountsDto getItemCounts(java.time.ZoneId zoneId) {
-        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(zoneId);
-        java.time.ZonedDateTime startOfDay = now.toLocalDate().atStartOfDay(zoneId);
-        java.time.ZonedDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
+    public ItemCountsDto getItemCounts(ZoneId zoneId) {
+        ZonedDateTime now = ZonedDateTime.now(zoneId);
+        ZonedDateTime startOfDay = now.toLocalDate().atStartOfDay(zoneId);
+        ZonedDateTime endOfDay = startOfDay.plusDays(1).minusNanos(1);
 
-        java.time.OffsetDateTime start = startOfDay.toOffsetDateTime();
-        java.time.OffsetDateTime end = endOfDay.toOffsetDateTime();
+        OffsetDateTime start = startOfDay.toOffsetDateTime();
+        OffsetDateTime end = endOfDay.toOffsetDateTime();
 
         long todayReported = reportRepository.countByCreatedAtBetween(start, end);
         long allReported = reportRepository.count();
-        long returned = reportRepository.countByStatus(com.nexus.nexus.Enumaration.Status.DELIVERED);
+        long returned = reportRepository.countByStatus(Status.DELIVERED);
 
-        return com.nexus.nexus.Dto.ItemCountsDto.builder()
+        return ItemCountsDto.builder()
                 .todayReported(todayReported)
                 .allReported(allReported)
                 .returned(returned)
@@ -172,7 +185,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public com.nexus.nexus.Dto.UserItemCountsDto getUserItemCounts(JwtPrincipal principal) {
+    public UserItemCountsDto getUserItemCounts(JwtPrincipal principal) {
         validatePrincipal(principal);
 
         User reporter = resolveReporterFromPrincipal(principal);
@@ -183,45 +196,45 @@ public class ProductServiceImpl implements ProductService {
 
         long foundReported = reportRepository.countByReporter_IdAndType(
                 reporterId,
-                com.nexus.nexus.Enumaration.TypeOfReport.FOUND
+                TypeOfReport.FOUND
         );
         long lostReported = reportRepository.countByReporter_IdAndType(
                 reporterId,
-                com.nexus.nexus.Enumaration.TypeOfReport.LOST
+                TypeOfReport.LOST
         );
 
-        return com.nexus.nexus.Dto.UserItemCountsDto.builder()
+        return UserItemCountsDto.builder()
                 .foundReported(foundReported)
                 .lostReported(lostReported)
                 .build();
     }
 
     @Override
-    public com.nexus.nexus.Dto.UserItemCountsDto getUserItemCounts(Long userId) {
+    public UserItemCountsDto getUserItemCounts(Long userId) {
         if (userId == null) {
             throw new IllegalStateException("Reporter id is missing");
         }
 
         long foundReported = reportRepository.countByReporter_IdAndType(
                 userId,
-                com.nexus.nexus.Enumaration.TypeOfReport.FOUND
+                TypeOfReport.FOUND
         );
         long lostReported = reportRepository.countByReporter_IdAndType(
                 userId,
-                com.nexus.nexus.Enumaration.TypeOfReport.LOST
+                TypeOfReport.LOST
         );
 
-        return com.nexus.nexus.Dto.UserItemCountsDto.builder()
+        return UserItemCountsDto.builder()
                 .foundReported(foundReported)
                 .lostReported(lostReported)
                 .build();
     }
 
     @Override
-    public java.util.List<com.nexus.nexus.Dto.CategoryDto> getAllCategories() {
+    public List<CategoryDto> getAllCategories() {
         return categoryRepository.findAll().stream()
-                .sorted(java.util.Comparator.comparing(Category::getId, java.util.Comparator.nullsLast(Long::compareTo)))
-                .map(category -> com.nexus.nexus.Dto.CategoryDto.builder()
+                .sorted(Comparator.comparing(Category::getId, Comparator.nullsLast(Long::compareTo)))
+                .map(category -> CategoryDto.builder()
                         .id(category.getId())
                         .name(category.getName())
                         .color(category.getColor())
@@ -365,7 +378,7 @@ public class ProductServiceImpl implements ProductService {
         long reportCount = itemReportRepository.countByItemId(itemId);
         item.setReportedCounts((int) reportCount);
         if (reportCount >= 3) {
-            item.setStatus(com.nexus.nexus.Enumaration.Status.REPORTED);
+            item.setStatus(Status.REPORTED);
         }
         item.setUpdatedAt(OffsetDateTime.now());
         reportRepository.save(item);

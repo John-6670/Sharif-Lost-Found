@@ -3,6 +3,7 @@ package com.nexus.nexus.Mapper;
 import com.nexus.nexus.Dto.ApplicantDto;
 import com.nexus.nexus.Dto.CommentResponseDto;
 import com.nexus.nexus.Entity.Comment;
+import com.nexus.nexus.Entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -21,5 +22,5 @@ public interface CommentMapper {
 
     @Mapping(source = "email", target = "email")
     @Mapping(source = "fullName", target = "fullName")
-    ApplicantDto toApplicantDto(com.nexus.nexus.Entity.User user);
+    ApplicantDto toApplicantDto(User user);
 }

@@ -3,6 +3,7 @@ package com.nexus.nexus.Service.ServiceImplementation;
 import com.nexus.nexus.Dto.CommentRequestDto;
 import com.nexus.nexus.Dto.CommentResponseDto;
 import com.nexus.nexus.Entity.Comment;
+import com.nexus.nexus.Entity.CommentReport;
 import com.nexus.nexus.Entity.Item;
 import com.nexus.nexus.Entity.User;
 import com.nexus.nexus.Mapper.CommentMapper;
@@ -155,7 +156,7 @@ public class CommentServiceImpl implements CommentService {
             throw new IllegalArgumentException("You have already reported this comment");
         }
 
-        commentReportRepository.save(com.nexus.nexus.Entity.CommentReport.builder()
+        commentReportRepository.save(CommentReport.builder()
                 .comment(comment)
                 .reporter(reporter)
                 .cause(cause.trim())

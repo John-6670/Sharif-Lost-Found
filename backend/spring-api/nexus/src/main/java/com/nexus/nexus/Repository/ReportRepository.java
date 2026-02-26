@@ -1,10 +1,10 @@
 package com.nexus.nexus.Repository;
 
+import com.nexus.nexus.Enumaration.TypeOfReport;
+import com.nexus.nexus.Enumaration.Status;
 import com.nexus.nexus.Entity.Item;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import com.nexus.nexus.Enumaration.TypeOfReport;
-import com.nexus.nexus.Enumaration.Status;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.math.BigDecimal;
@@ -18,11 +18,11 @@ public interface ReportRepository extends JpaRepository<Item, Long> {
 
     List<Item> findAllByCategory_Id(Long categoryId);
 
-    List<Item> findAllByStatus(com.nexus.nexus.Enumaration.Status status);
+    List<Item> findAllByStatus(Status status);
 
-    List<Item> findAllByCategory_IdAndStatus(Long categoryId, com.nexus.nexus.Enumaration.Status status);
+    List<Item> findAllByCategory_IdAndStatus(Long categoryId, Status status);
 
-    Page<Item> findAllByStatus(com.nexus.nexus.Enumaration.Status status, Pageable pageable);
+    Page<Item> findAllByStatus(Status status, Pageable pageable);
 
     @Query("""
             SELECT i FROM Item i
@@ -79,7 +79,7 @@ public interface ReportRepository extends JpaRepository<Item, Long> {
 
     long countByCreatedAtBetween(OffsetDateTime start, OffsetDateTime end);
 
-    long countByStatus(com.nexus.nexus.Enumaration.Status status);
+    long countByStatus(Status status);
 
     long countByReporter_IdAndType(Long reporterId, TypeOfReport type);
 }
