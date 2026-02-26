@@ -9,6 +9,7 @@ import com.nexus.nexus.Enumaration.Status;
 import com.nexus.nexus.Enumaration.TypeOfReport;
 import com.nexus.nexus.Mapper.ProductMapper;
 import com.nexus.nexus.Repository.CategoryRepository;
+import com.nexus.nexus.Repository.ItemReportRepository;
 import com.nexus.nexus.Repository.ReportRepository;
 import com.nexus.nexus.Repository.UserRepository;
 import com.nexus.nexus.Security.JwtPrincipal;
@@ -46,6 +47,9 @@ class ProductServiceImplTest {
     private UserRepository userRepository;
 
     @Mock
+    private ItemReportRepository itemReportRepository;
+
+    @Mock
     private ProductMapper productMapper;
 
     @InjectMocks
@@ -77,9 +81,8 @@ class ProductServiceImplTest {
     @Test
     void findAllProducts_returnsMappedDtos() {
         Item item = Item.builder().id(10L).build();
-        ProductResponseDto dto = ProductResponseDto.builder().id(10L).build();
 
-        when(reportRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
+        when(reportRepository.findAllByStatus(eq(Status.ACTIVE), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(item)));
         when(productMapper.toListItemDtoList(List.of(item)))
                 .thenReturn(List.of(com.nexus.nexus.Dto.ProductListItemDto.builder().id(10L).build()));
@@ -89,8 +92,18 @@ class ProductServiceImplTest {
 
         assertThat(result.items()).hasSize(1);
         assertThat(result.items().get(0).getId()).isEqualTo(10L);
-        verify(reportRepository).findAll(any(org.springframework.data.domain.Pageable.class));
+        verify(reportRepository).findAllByStatus(eq(Status.ACTIVE), any(org.springframework.data.domain.Pageable.class));
         verify(productMapper).toListItemDtoList(List.of(item));
+    }
+
+    @Test
+    void findAllProducts_usesSafePaging() {
+        when(reportRepository.findAllByStatus(eq(Status.ACTIVE), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        service.findAllProducts(-1, 0);
+
+        verify(reportRepository).findAllByStatus(eq(Status.ACTIVE), any(org.springframework.data.domain.Pageable.class));
     }
 
     @Test
@@ -135,17 +148,134 @@ class ProductServiceImplTest {
     }
 
     @Test
-    void reportItem_incrementsCounterAndUpdatesTimestamp() {
+    void updateProduct_updatesFieldsForOwner() {
+        Item item = Item.builder()
+                .id(5L)
+                .name("old")
+                .description("old desc")
+                .reporter(User.builder().email("user@example.com").build())
+                .status(Status.ACTIVE)
+                .build();
+
+        ProductRequestDto request = ProductRequestDto.builder()
+                .name("new")
+                .description("new desc")
+                .status(Status.DELIVERED)
+                .build();
+
+        when(reportRepository.findById(5L)).thenReturn(Optional.of(item));
+        when(reportRepository.save(any(Item.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(productMapper.toDto(any(Item.class))).thenReturn(ProductResponseDto.builder().id(5L).build());
+
+        ProductResponseDto result = service.updateProduct(5L, request, principal);
+
+        assertThat(result.getId()).isEqualTo(5L);
+        assertThat(item.getName()).isEqualTo("new");
+        assertThat(item.getDescription()).isEqualTo("new desc");
+        assertThat(item.getStatus()).isEqualTo(Status.DELIVERED);
+    }
+
+    @Test
+    void reportItem_rejectsDuplicateReport() {
         Item item = Item.builder()
                 .id(7L)
                 .reportedCounts(1)
                 .build();
 
         when(reportRepository.findById(7L)).thenReturn(Optional.of(item));
+        when(userRepository.findByEmail(eq("user@example.com"))).thenReturn(Optional.of(reporter));
+        when(itemReportRepository.existsByItemIdAndReporterId(7L, 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.reportItem(7L, principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("already reported");
+    }
+
+    @Test
+    void reportItem_updatesReportedCountsAndStatus() {
+        Item item = Item.builder()
+                .id(7L)
+                .reportedCounts(1)
+                .build();
+
+        when(reportRepository.findById(7L)).thenReturn(Optional.of(item));
+        when(userRepository.findByEmail(eq("user@example.com"))).thenReturn(Optional.of(reporter));
+        when(itemReportRepository.existsByItemIdAndReporterId(7L, 1L)).thenReturn(false);
+        when(itemReportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(itemReportRepository.countByItemId(7L)).thenReturn(3L);
+
+        service.reportItem(7L, principal);
+
+        assertThat(item.getReportedCounts()).isEqualTo(3);
+        assertThat(item.getStatus()).isEqualTo(Status.REPORTED);
+        verify(reportRepository).save(item);
+    }
+
+    @Test
+    void reportItem_updatesReportedCountsWithoutChangingStatus() {
+        Item item = Item.builder()
+                .id(7L)
+                .reportedCounts(1)
+                .status(Status.ACTIVE)
+                .build();
+
+        when(reportRepository.findById(7L)).thenReturn(Optional.of(item));
+        when(userRepository.findByEmail(eq("user@example.com"))).thenReturn(Optional.of(reporter));
+        when(itemReportRepository.existsByItemIdAndReporterId(7L, 1L)).thenReturn(false);
+        when(itemReportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(itemReportRepository.countByItemId(7L)).thenReturn(2L);
 
         service.reportItem(7L, principal);
 
         assertThat(item.getReportedCounts()).isEqualTo(2);
+        assertThat(item.getStatus()).isEqualTo(Status.ACTIVE);
         verify(reportRepository).save(item);
+    }
+
+    @Test
+    void getItemCounts_returnsAggregates() {
+        when(reportRepository.countByCreatedAtBetween(any(), any())).thenReturn(2L);
+        when(reportRepository.count()).thenReturn(10L);
+        when(reportRepository.countByStatus(Status.DELIVERED)).thenReturn(4L);
+
+        com.nexus.nexus.Dto.ItemCountsDto counts = service.getItemCounts(java.time.ZoneId.of("UTC"));
+
+        assertThat(counts.getTodayReported()).isEqualTo(2L);
+        assertThat(counts.getAllReported()).isEqualTo(10L);
+        assertThat(counts.getReturned()).isEqualTo(4L);
+    }
+
+    @Test
+    void getUserItemCounts_usesReporterId() {
+        when(userRepository.findByEmail(eq("user@example.com"))).thenReturn(Optional.of(reporter));
+        when(reportRepository.countByReporter_IdAndType(1L, TypeOfReport.FOUND)).thenReturn(5L);
+        when(reportRepository.countByReporter_IdAndType(1L, TypeOfReport.LOST)).thenReturn(2L);
+
+        com.nexus.nexus.Dto.UserItemCountsDto counts = service.getUserItemCounts(principal);
+
+        assertThat(counts.getFoundReported()).isEqualTo(5L);
+        assertThat(counts.getLostReported()).isEqualTo(2L);
+    }
+
+    @Test
+    void searchByLocation_rejectsPartialCoordinates() {
+        assertThatThrownBy(() -> service.searchByLocation(1.0, null, 2.0, null, null, null, null, null, 0, 10))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("lat, lon, and radiusKm");
+    }
+
+    @Test
+    void addProduct_rejectsMissingName() {
+        ProductRequestDto request = ProductRequestDto.builder()
+                .type(TypeOfReport.FOUND)
+                .status(Status.ACTIVE)
+                .latitude(new BigDecimal("35.7"))
+                .longitude(new BigDecimal("51.3"))
+                .categoryName("phones")
+                .build();
+
+        assertThatThrownBy(() -> service.addProduct(request, principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Name is required");
     }
 }

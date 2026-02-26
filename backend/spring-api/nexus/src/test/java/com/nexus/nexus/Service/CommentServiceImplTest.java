@@ -82,6 +82,47 @@ class CommentServiceImplTest {
     }
 
     @Test
+    void getCommentsForItem_rejectsMissingItem() {
+        when(reportRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getCommentsForItem(99L, 0, 10))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Item not found");
+    }
+
+    @Test
+    void addComment_createsReply() {
+        Item item = Item.builder().id(1L).build();
+        Comment parent = Comment.builder().id(5L).item(item).build();
+        Comment saved = Comment.builder().id(6L).item(item).parent(parent).text("hi").build();
+
+        when(reportRepository.findById(1L)).thenReturn(Optional.of(item));
+        when(commentRepository.findById(5L)).thenReturn(Optional.of(parent));
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(reporter));
+        when(commentRepository.save(any(Comment.class))).thenReturn(saved);
+        when(commentMapper.toDto(saved)).thenReturn(CommentResponseDto.builder().id(6L).build());
+
+        CommentResponseDto result = service.addComment(1L, new CommentRequestDto("hi", 5L), principal);
+
+        assertThat(result.getId()).isEqualTo(6L);
+    }
+
+    @Test
+    void addComment_rejectsParentFromDifferentItem() {
+        Item item = Item.builder().id(1L).build();
+        Item otherItem = Item.builder().id(2L).build();
+        Comment parent = Comment.builder().id(5L).item(otherItem).build();
+
+        when(reportRepository.findById(1L)).thenReturn(Optional.of(item));
+        when(commentRepository.findById(5L)).thenReturn(Optional.of(parent));
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(reporter));
+
+        assertThatThrownBy(() -> service.addComment(1L, new CommentRequestDto("hi", 5L), principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Parent comment does not belong");
+    }
+
+    @Test
     void reportComment_deletesAfterThreeReports() {
         Item item = Item.builder().id(1L).build();
         Comment comment = Comment.builder().id(2L).item(item).build();
@@ -100,6 +141,24 @@ class CommentServiceImplTest {
     }
 
     @Test
+    void reportComment_doesNotDeleteBeforeThreshold() {
+        Item item = Item.builder().id(1L).build();
+        Comment comment = Comment.builder().id(2L).item(item).build();
+
+        when(reportRepository.findById(1L)).thenReturn(Optional.of(item));
+        when(commentRepository.findById(2L)).thenReturn(Optional.of(comment));
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(reporter));
+        when(commentReportRepository.existsByCommentIdAndReporterId(2L, 1L)).thenReturn(false);
+        when(commentReportRepository.countByCommentId(2L)).thenReturn(2L);
+
+        service.reportComment(1L, 2L, "spam", principal);
+
+        verify(commentRepository, never()).deleteByParentId(2L);
+        verify(commentReportRepository, never()).deleteByCommentId(2L);
+        verify(commentRepository, never()).deleteById(2L);
+    }
+
+    @Test
     void reportComment_rejectsDuplicateReport() {
         Item item = Item.builder().id(1L).build();
         Comment comment = Comment.builder().id(2L).item(item).build();
@@ -112,6 +171,48 @@ class CommentServiceImplTest {
         assertThatThrownBy(() -> service.reportComment(1L, 2L, "spam", principal))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("already reported");
+    }
+
+    @Test
+    void reportComment_rejectsBlankCause() {
+        assertThatThrownBy(() -> service.reportComment(1L, 2L, " ", principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Report cause is required");
+    }
+
+    @Test
+    void reportComment_rejectsMissingItem() {
+        when(reportRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reportComment(1L, 2L, "spam", principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Item not found");
+    }
+
+    @Test
+    void reportComment_rejectsMissingComment() {
+        Item item = Item.builder().id(1L).build();
+
+        when(reportRepository.findById(1L)).thenReturn(Optional.of(item));
+        when(commentRepository.findById(2L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reportComment(1L, 2L, "spam", principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Comment not found");
+    }
+
+    @Test
+    void reportComment_rejectsCommentFromAnotherItem() {
+        Item item = Item.builder().id(1L).build();
+        Item otherItem = Item.builder().id(3L).build();
+        Comment comment = Comment.builder().id(2L).item(otherItem).build();
+
+        when(reportRepository.findById(1L)).thenReturn(Optional.of(item));
+        when(commentRepository.findById(2L)).thenReturn(Optional.of(comment));
+
+        assertThatThrownBy(() -> service.reportComment(1L, 2L, "spam", principal))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("does not belong");
     }
 
     @Test
