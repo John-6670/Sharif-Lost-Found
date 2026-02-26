@@ -107,6 +107,30 @@ public class ProductController {
                 .build());
     }
 
+    @GetMapping("/counts/me")
+    public ResponseEntity<ResponseModel<com.nexus.nexus.Dto.UserItemCountsDto>> getMyItemCounts() {
+        JwtPrincipal principal = getJwtPrincipal();
+        com.nexus.nexus.Dto.UserItemCountsDto counts = productService.getUserItemCounts(principal);
+        return ResponseEntity.ok(ResponseModel.<com.nexus.nexus.Dto.UserItemCountsDto>builder()
+                .success(true)
+                .message("User counts fetched successfully")
+                .data(counts)
+                .build());
+    }
+
+    @GetMapping("/counts/{userId}")
+    public ResponseEntity<ResponseModel<com.nexus.nexus.Dto.UserItemCountsDto>> getPublicProfileItems(
+        @PathVariable Long userId
+    ) {
+        JwtPrincipal principal = getJwtPrincipal();
+        com.nexus.nexus.Dto.UserItemCountsDto counts = productService.getUserItemCounts(principal);
+        return ResponseEntity.ok(ResponseModel.<com.nexus.nexus.Dto.UserItemCountsDto>builder()
+                .success(true)
+                .message("User counts fetched successfully")
+                .data(counts)
+                .build());
+    }
+
     @GetMapping("/categories")
     public ResponseEntity<ResponseModel<List<com.nexus.nexus.Dto.CategoryDto>>> getAllCategories() {
         List<com.nexus.nexus.Dto.CategoryDto> categories = productService.getAllCategories();

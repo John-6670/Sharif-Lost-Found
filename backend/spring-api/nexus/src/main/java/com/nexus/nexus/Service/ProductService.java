@@ -30,5 +30,9 @@ public interface ProductService {
 
     com.nexus.nexus.Dto.ItemCountsDto getItemCounts(java.time.ZoneId zoneId);
 
+    com.nexus.nexus.Dto.UserItemCountsDto getUserItemCounts(JwtPrincipal principal);
+
+    com.nexus.nexus.Dto.UserItemCountsDto getUserItemCounts(Long userId);
+
     java.util.List<com.nexus.nexus.Dto.CategoryDto> getAllCategories();
 }

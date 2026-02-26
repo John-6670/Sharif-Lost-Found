@@ -172,6 +172,52 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public com.nexus.nexus.Dto.UserItemCountsDto getUserItemCounts(JwtPrincipal principal) {
+        validatePrincipal(principal);
+
+        User reporter = resolveReporterFromPrincipal(principal);
+        Long reporterId = reporter.getId();
+        if (reporterId == null) {
+            throw new IllegalStateException("Reporter id is missing");
+        }
+
+        long foundReported = reportRepository.countByReporter_IdAndType(
+                reporterId,
+                com.nexus.nexus.Enumaration.TypeOfReport.FOUND
+        );
+        long lostReported = reportRepository.countByReporter_IdAndType(
+                reporterId,
+                com.nexus.nexus.Enumaration.TypeOfReport.LOST
+        );
+
+        return com.nexus.nexus.Dto.UserItemCountsDto.builder()
+                .foundReported(foundReported)
+                .lostReported(lostReported)
+                .build();
+    }
+
+    @Override
+    public com.nexus.nexus.Dto.UserItemCountsDto getUserItemCounts(Long userId) {
+        if (userId == null) {
+            throw new IllegalStateException("Reporter id is missing");
+        }
+
+        long foundReported = reportRepository.countByReporter_IdAndType(
+                userId,
+                com.nexus.nexus.Enumaration.TypeOfReport.FOUND
+        );
+        long lostReported = reportRepository.countByReporter_IdAndType(
+                userId,
+                com.nexus.nexus.Enumaration.TypeOfReport.LOST
+        );
+
+        return com.nexus.nexus.Dto.UserItemCountsDto.builder()
+                .foundReported(foundReported)
+                .lostReported(lostReported)
+                .build();
+    }
+
+    @Override
     public java.util.List<com.nexus.nexus.Dto.CategoryDto> getAllCategories() {
         return categoryRepository.findAll().stream()
                 .sorted(java.util.Comparator.comparing(Category::getId, java.util.Comparator.nullsLast(Long::compareTo)))
